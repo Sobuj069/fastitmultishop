@@ -5875,6 +5875,7 @@
 
         var localData = localStorage.getItem('pos-items') ? JSON.parse(localStorage.getItem('pos-items')) : [];
         var env_warranty = "{{ env('APP_WARRANTY') }}";
+        var env_sc = "{{ env('APP_SC') }}";
 
         function showList() {
             if (localData.length <= 0) {
@@ -6951,7 +6952,7 @@
                 displayStock = data.stock_qty;
             }
 
-            if (data.variations && data.variations.length > 0) {
+            if (env_sc === 'yes' && data.variations && data.variations.length > 0) {
                 variation_data += `<input type="text" class="has_size" data-has-size="true" hidden>
                 <select name="variation_id[]" class="form-control size" required>
                 <option value="">{{ __('Select Variation') }}</option>`;
@@ -7290,7 +7291,7 @@
             let variation_select = row.find('select[name="variation_id[]"]');
             let stock = 0;
 
-            if (variation_select.length > 0) {
+            if (env_sc === 'yes' && variation_select.length > 0 && variation_select.val()) {
                 let selectedOption = variation_select.find('option:selected');
                 let variationStock = parseFloat(selectedOption.attr('stock')) || 0;
                 stock = has_sub_unit === "true" ? variationStock * related_by : variationStock;
@@ -7415,7 +7416,7 @@
                 let name = row.find('.name').val() || 'Product';
                 let varSelect = row.find('select[name="variation_id[]"]');
                 
-                if (varSelect.length > 0) {
+                if (env_sc === 'yes' && varSelect.length > 0) {
                     let varId = varSelect.val();
                     let selectedOpt = varSelect.find('option:selected');
                     
@@ -7552,7 +7553,7 @@
                 let variation_select = row.find('select[name="variation_id[]"]');
                 let stock = 0;
 
-                if (variation_select.length > 0) {
+                if (env_sc === 'yes' && variation_select.length > 0 && variation_select.val()) {
                     // Get stock from selected variation
                     let selectedOption = variation_select.find('option:selected');
                     let variationStock = parseFloat(selectedOption.attr('stock')) || 0;
@@ -7806,6 +7807,9 @@
 
         // ===================order modal===================
         function checkVariationSelection() {
+            if (env_sc !== 'yes') {
+                return true;
+            }
             var variationMissing = false;
             var missingName = '';
             var missingSelect = null;
@@ -9517,7 +9521,7 @@ $(document).on('input change', '.inst_last_due_date', function() {
                 let stock = 0;
                 let displayStock = "";
 
-                if (variation_select.length > 0) {
+                if (env_sc === 'yes' && variation_select.length > 0 && variation_select.val()) {
                     let selectedOption = variation_select.find('option:selected');
                     let variationStock = parseFloat(selectedOption.attr('stock')) || 0;
                     stock = has_sub_unit === "true" ? variationStock * related_by : variationStock;

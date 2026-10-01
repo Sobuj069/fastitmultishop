@@ -659,6 +659,7 @@ class InvoiceController extends Controller
 
         // ===== Server-side Stock & Variation Stock Validation =====
         if ($request->has('product_id') && is_array($request->product_id)) {
+            $appScEnabled = (env('APP_SC') == 'yes');
             foreach ($request->product_id as $key => $productId) {
                 $product = Product::find($productId);
                 if (!$product || $product->is_service == 1) {
@@ -666,10 +667,16 @@ class InvoiceController extends Controller
                 }
 
                 $variationId = $request->variation_id[$key] ?? null;
-                $hasVariations = \App\Models\ProductVariation::where('product_id', $productId)->exists();
+                $hasVariations = $appScEnabled && \App\Models\ProductVariation::where('product_id', $productId)->exists();
                 if ($hasVariations && empty($variationId)) {
-                    session()->flash('error', __("Please select a variation for product ':prod'", ['prod' => $product->name]));
-                    return redirect()->back()->withInput();
+                    $totalVarStock = \App\Models\PurchaseItem::where('product_id', $productId)
+                        ->whereNotNull('product_variation_id')
+                        ->where('stock_qty', '>', 0)
+                        ->sum('stock_qty');
+                    if ($totalVarStock > 0) {
+                        session()->flash('error', __("Please select a variation for product ':prod'", ['prod' => $product->name]));
+                        return redirect()->back()->withInput();
+                    }
                 }
 
                 $mainQty = (float)($request->main_qty[$key] ?? 1);
@@ -682,18 +689,21 @@ class InvoiceController extends Controller
                     return redirect()->back()->withInput();
                 }
 
-                if ($variationId) {
+                if ($variationId && $appScEnabled) {
                     $varStock = variation_stock($variationId);
                     if ($varStock < $saleQty) {
-                        $variation = \App\Models\ProductVariation::with('size', 'color')->find($variationId);
-                        $varName = trim(($variation?->size?->size ?? '') . ' ' . ($variation?->color?->color ?? ''));
-                        session()->flash('error', __('Stock Out Error: Variation ":var" of product ":prod" is out of stock! Available: :avail, Requested: :req.', [
-                            'var' => $varName ?: "#{$variationId}",
-                            'prod' => $product->name,
-                            'avail' => $varStock,
-                            'req' => $saleQty
-                        ]));
-                        return redirect()->back()->withInput();
+                        $prodStock = (float) product_fake_stock_val($product);
+                        if ($prodStock < $saleQty) {
+                            $variation = \App\Models\ProductVariation::with('size', 'color')->find($variationId);
+                            $varName = trim(($variation?->size?->size ?? '') . ' ' . ($variation?->color?->color ?? ''));
+                            session()->flash('error', __('Stock Out Error: Variation ":var" of product ":prod" is out of stock! Available: :avail, Requested: :req.', [
+                                'var' => $varName ?: "#{$variationId}",
+                                'prod' => $product->name,
+                                'avail' => $varStock,
+                                'req' => $saleQty
+                            ]));
+                            return redirect()->back()->withInput();
+                        }
                     }
                 } else {
                     $prodStock = (float) product_fake_stock_val($product);
@@ -1168,16 +1178,23 @@ class InvoiceController extends Controller
         }
 
         // Validate that products with variations have a variation selected
+        $appScEnabled = (env('APP_SC') == 'yes');
         foreach ($request->product_id as $key => $productId) {
             $product = Product::find($productId);
             if (!$product || $product->is_service == 1) {
                 continue;
             }
-            $hasVariations = \App\Models\ProductVariation::where('product_id', $productId)->exists();
+            $hasVariations = $appScEnabled && \App\Models\ProductVariation::where('product_id', $productId)->exists();
             $variationId = $request->variation_id[$key] ?? null;
             if ($hasVariations && empty($variationId)) {
-                session()->flash('error', __("Please select a variation for product ':prod'", ['prod' => $product->name]));
-                return redirect()->back()->withInput();
+                $totalVarStock = \App\Models\PurchaseItem::where('product_id', $productId)
+                    ->whereNotNull('product_variation_id')
+                    ->where('stock_qty', '>', 0)
+                    ->sum('stock_qty');
+                if ($totalVarStock > 0) {
+                    session()->flash('error', __("Please select a variation for product ':prod'", ['prod' => $product->name]));
+                    return redirect()->back()->withInput();
+                }
             }
         }
 

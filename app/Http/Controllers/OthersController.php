@@ -471,27 +471,31 @@ class OthersController extends Controller
         $data['stock_qty'] = product_stock_check($data['product'], $activeBranchId);
         $data['pure_stock'] = product_fake_stock_val($data['product'], $activeBranchId);
 
-        // Variation গুলো size name অনুযায়ী sort হবে
-        $variations = $data['product']->product_variations()
-            ->with(['size', 'color'])
-            ->leftJoin('product_sizes', 'product_variations.size_id', '=', 'product_sizes.id')
-            ->select('product_variations.*')
-            ->orderBy('product_sizes.size', 'asc')
-            ->get();
+        if (env('APP_SC') == 'yes') {
+            // Variation গুলো size name অনুযায়ী sort হবে
+            $variations = $data['product']->product_variations()
+                ->with(['size', 'color'])
+                ->leftJoin('product_sizes', 'product_variations.size_id', '=', 'product_sizes.id')
+                ->select('product_variations.*')
+                ->orderBy('product_sizes.size', 'asc')
+                ->get();
 
-        $dataa = [];
+            $dataa = [];
 
-        foreach ($variations as $variation) {
-            $dataa[] = [
-                'id' => $variation->id,
-                'name' => $variation->product->name,
-                'size' => $variation->size->size ?? '',
-                'color' => $variation->color->color ?? '',
-                'stock' => variation_stock($variation->id, $activeBranchId),
-            ];
+            foreach ($variations as $variation) {
+                $dataa[] = [
+                    'id' => $variation->id,
+                    'name' => $variation->product->name,
+                    'size' => $variation->size->size ?? '',
+                    'color' => $variation->color->color ?? '',
+                    'stock' => variation_stock($variation->id, $activeBranchId),
+                ];
+            }
+
+            $data['variations'] = $dataa;
+        } else {
+            $data['variations'] = [];
         }
-
-        $data['variations'] = $dataa;
         $data['imeis'] = $this->getProductImeis($my_id, $activeBranchId);
 
         // Warranty default: Product's set warranty first, or latest purchase warranty
@@ -606,19 +610,23 @@ class OthersController extends Controller
         try {
             $data['product'] = Product::where('id', $my_id)->with('unit.related_unit')->first();
             $data['stock_qty'] = product_stock($data['product']);
-            $variations = $data['product']->product_variations()->with(['size', 'color'])->orderBy('variation_id')->get();
-            $dataa = [];
-     
-            foreach ($variations as $variation) {
-                $dataa[] = [
-                    'id' => $variation->id,
-                    'name' => $variation->product->name ?? $data['product']->name,
-                    'size' => $variation->size->size ?? '',
-                    'color' => $variation->color->color ?? '',
-                    'stock' => variation_stock($variation->id)
-                ];
+            if (env('APP_SC') == 'yes') {
+                $variations = $data['product']->product_variations()->with(['size', 'color'])->orderBy('variation_id')->get();
+                $dataa = [];
+         
+                foreach ($variations as $variation) {
+                    $dataa[] = [
+                        'id' => $variation->id,
+                        'name' => $variation->product->name ?? $data['product']->name,
+                        'size' => $variation->size->size ?? '',
+                        'color' => $variation->color->color ?? '',
+                        'stock' => variation_stock($variation->id)
+                    ];
+                }
+                $data['variations'] = $dataa;
+            } else {
+                $data['variations'] = [];
             }
-            $data['variations'] = $dataa;
             $data['imeis'] = $this->getProductImeis($my_id);
     
             // Warranty default: Product's set warranty first, or latest purchase warranty

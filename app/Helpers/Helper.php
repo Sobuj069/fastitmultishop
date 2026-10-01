@@ -1744,9 +1744,10 @@ function calculateUnitPriceUsingFIFO($productId, $requiredQty, $variationId = nu
 {
     $product = Product::find($productId);
 
-    if ($product->is_service == 0) {
-        $userBranchId = auth()->user()->branch_id;
-        $filterBranchId = session('branch_filter_id', auth()->user()->branch_id);
+    if ($product && $product->is_service == 0) {
+        $userBranchId = auth()->user() ? auth()->user()->branch_id : 1;
+        $filterBranchId = session('branch_filter_id', $userBranchId);
+        $effectiveBranchId = $branchId ?: (($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId);
 
         // Base query for available stock
         $query = PurchaseItem::where('product_id', $productId)
@@ -1754,23 +1755,14 @@ function calculateUnitPriceUsingFIFO($productId, $requiredQty, $variationId = nu
             ->orderBy('date', 'asc')
             ->orderBy('id', 'asc');
 
+        if ($effectiveBranchId) {
+            $query->where('branch_id', $effectiveBranchId);
+        }
+
         if ($variationId !== null && $variationId !== '') {
             $query->where('product_variation_id', $variationId);
         } else {
             $query->whereNull('product_variation_id'); // for products without variation
-        }
-
-        // Branch filter
-        if ($branchId) {
-            $query->where('branch_id', $branchId);
-        } else {
-            if ($userBranchId == 1) {
-                if ($filterBranchId) {
-                    $query->where('branch_id', $filterBranchId);
-                }
-            } else {
-                $query->where('branch_id', $userBranchId);
-            }
         }
 
         $purchaseItems = $query->get();
@@ -1783,51 +1775,91 @@ function calculateUnitPriceUsingFIFO($productId, $requiredQty, $variationId = nu
             foreach ($purchaseItems as $item) {
                 if ($remainingQty <= 0) break;
 
-                $availableQty = $item->stock_qty;
+                $availableQty = (float) $item->stock_qty;
                 $usedQty = min($remainingQty, $availableQty);
 
                 $item->update(['stock_qty' => $availableQty - $usedQty]);
 
-                if ($product->unit->related_unit == null) {
+                if (!$product->unit || $product->unit->related_unit == null) {
                     $totalCost += $usedQty * $item->rate;
                 } else {
-                    $totalCost += ($usedQty / $product->unit->related_value) * $item->rate;
+                    $relVal = ($product->unit->related_value > 0) ? (float) $product->unit->related_value : 1.0;
+                    $totalCost += ($usedQty / $relVal) * $item->rate;
                 }
 
                 $remainingQty -= $usedQty;
             }
-        } else {
-            // 🔹 No stock available, use last purchase rate
+        }
+
+        // Fallback: If remainingQty > 0 and variationId was given (or wasn't given), check if other purchase items exist for this product and branch
+        if ($remainingQty > 0) {
+            $fallbackQuery = PurchaseItem::where('product_id', $productId)
+                ->where('stock_qty', '>', 0)
+                ->orderBy('date', 'asc')
+                ->orderBy('id', 'asc');
+
+            if ($effectiveBranchId) {
+                $fallbackQuery->where('branch_id', $effectiveBranchId);
+            }
+
+            if ($variationId !== null && $variationId !== '') {
+                $fallbackQuery->where(function($q) use ($variationId) {
+                    $q->whereNull('product_variation_id')->orWhere('product_variation_id', '!=', $variationId);
+                });
+            }
+
+            $fallbackItems = $fallbackQuery->get();
+            foreach ($fallbackItems as $item) {
+                if ($remainingQty <= 0) break;
+
+                $availableQty = (float) $item->stock_qty;
+                $usedQty = min($remainingQty, $availableQty);
+
+                $item->update(['stock_qty' => $availableQty - $usedQty]);
+
+                if (!$product->unit || $product->unit->related_unit == null) {
+                    $totalCost += $usedQty * $item->rate;
+                } else {
+                    $relVal = ($product->unit->related_value > 0) ? (float) $product->unit->related_value : 1.0;
+                    $totalCost += ($usedQty / $relVal) * $item->rate;
+                }
+
+                $remainingQty -= $usedQty;
+            }
+        }
+
+        // 🔹 No stock available or partial stock, use last purchase rate
+        if ($remainingQty > 0) {
             $lastPurchaseItemQuery = PurchaseItem::where('product_id', $productId);
 
             if ($variationId !== null && $variationId !== '') {
                 $lastPurchaseItemQuery->where('product_variation_id', $variationId);
-            } else {
-                $lastPurchaseItemQuery->whereNull('product_variation_id');
             }
 
-            if ($branchId) {
-                $lastPurchaseItemQuery->where('branch_id', $branchId);
-            } else {
-                if ($userBranchId == 1) {
-                    if ($filterBranchId) {
-                        $lastPurchaseItemQuery->where('branch_id', $filterBranchId);
-                    }
-                } else {
-                    $lastPurchaseItemQuery->where('branch_id', $userBranchId);
-                }
+            if ($effectiveBranchId) {
+                $lastPurchaseItemQuery->where('branch_id', $effectiveBranchId);
             }
 
             $lastPurchaseItem = $lastPurchaseItemQuery->orderBy('id', 'desc')->first();
+            if (!$lastPurchaseItem) {
+                $lastPurchaseItem = PurchaseItem::where('product_id', $productId)->orderBy('id', 'desc')->first();
+            }
 
             if ($lastPurchaseItem) {
-                if ($product->unit->related_unit == null) {
-                    $totalCost = $requiredQty * $lastPurchaseItem->rate;
+                if (!$product->unit || $product->unit->related_unit == null) {
+                    $totalCost += $remainingQty * $lastPurchaseItem->rate;
                 } else {
-                    $totalCost = ($requiredQty / $product->unit->related_value) * $lastPurchaseItem->rate;
+                    $relVal = ($product->unit->related_value > 0) ? (float) $product->unit->related_value : 1.0;
+                    $totalCost += ($remainingQty / $relVal) * $lastPurchaseItem->rate;
                 }
             } else {
-                $totalCost = 0; // fallback if no purchase exists at all
+                $pPrice = (float)($product->purchase_price ?? 0);
+                if (!$product->unit || $product->unit->related_unit == null) {
+                    $totalCost += $remainingQty * $pPrice;
+                } else {
+                    $relVal = ($product->unit->related_value > 0) ? (float) $product->unit->related_value : 1.0;
+                    $totalCost += ($remainingQty / $relVal) * $pPrice;
+                }
             }
         }
     } else {
@@ -1906,27 +1938,33 @@ function restoreToFIFO($productId, $qtyToRestore, $variationId = null, $branchId
     $product = Product::find($productId);
     if (!$product || $product->is_service == 1) return;
 
-    $userBranchId = auth()->user()->branch_id;
-    $filterBranchId = session('branch_filter_id', auth()->user()->branch_id);
+    $userBranchId = auth()->user() ? auth()->user()->branch_id : 1;
+    $filterBranchId = session('branch_filter_id', $userBranchId);
+    $effectiveBranchId = $branchId ?: (($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId);
 
     $query = PurchaseItem::where('product_id', $productId)
         ->orderBy('id', 'desc'); // reverse order (LIFO restore to most recent stock first)
 
     if ($variationId) {
         $query->where('product_variation_id', $variationId);
+    } else {
+        $query->whereNull('product_variation_id');
     }
 
-    if ($branchId) {
-        $query->where('branch_id', $branchId);
-    } else {
-        if ($userBranchId == 1 && $filterBranchId) {
-            $query->where('branch_id', $filterBranchId);
-        } else {
-            $query->where('branch_id', $userBranchId);
-        }
+    if ($effectiveBranchId) {
+        $query->where('branch_id', $effectiveBranchId);
     }
 
     $purchaseItems = $query->get();
+
+    // Fallback if empty and variationId was given (or was null)
+    if ($purchaseItems->isEmpty()) {
+        $fallbackQuery = PurchaseItem::where('product_id', $productId)->orderBy('id', 'desc');
+        if ($effectiveBranchId) {
+            $fallbackQuery->where('branch_id', $effectiveBranchId);
+        }
+        $purchaseItems = $fallbackQuery->get();
+    }
 
     $remaining = (float) $qtyToRestore;
     foreach ($purchaseItems as $item) {
@@ -2011,15 +2049,21 @@ function reduceStockFIFO($productId, $requiredQty, $variationId = null, $branchI
         return 0;
     }
 
+    $userBranchId = auth()->user() ? auth()->user()->branch_id : 1;
+    $filterBranchId = session('branch_filter_id', $userBranchId);
+    $effectiveBranchId = $branchId ?: (($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId);
+
     $purchaseItemsQuery = PurchaseItem::where('product_id', $productId)
         ->where('stock_qty', '>', 0);
 
     if ($variationId) {
         $purchaseItemsQuery->where('product_variation_id', $variationId);
+    } else {
+        $purchaseItemsQuery->whereNull('product_variation_id');
     }
 
-    if ($branchId) {
-        $purchaseItemsQuery->where('branch_id', $branchId);
+    if ($effectiveBranchId) {
+        $purchaseItemsQuery->where('branch_id', $effectiveBranchId);
     }
 
     $purchaseItems = $purchaseItemsQuery->orderBy('date', 'asc')->orderBy('id', 'asc')->get();
@@ -2030,23 +2074,60 @@ function reduceStockFIFO($productId, $requiredQty, $variationId = null, $branchI
     foreach ($purchaseItems as $item) {
         if ($remainingQty <= 0) break;
 
-        $availableQty = $item->stock_qty;
+        $availableQty = (float) $item->stock_qty;
         $usedQty = min($remainingQty, $availableQty);
 
         $item->stock_qty -= $usedQty;
         $item->save();
 
-        if ($product->unit->related_unit == null) {
+        if (!$product->unit || $product->unit->related_unit == null) {
             $totalCost += $usedQty * $item->rate;
         } else {
-            $totalCost += ($usedQty / $product->unit->related_value) * $item->rate;
+            $relVal = ($product->unit->related_value > 0) ? (float) $product->unit->related_value : 1.0;
+            $totalCost += ($usedQty / $relVal) * $item->rate;
         }
 
         $remainingQty -= $usedQty;
     }
 
+    // Fallback if remainingQty > 0: search any purchase items for this product
     if ($remainingQty > 0) {
-        throw new \Exception("Insufficient stock for product ID: {$productId}" . ($variationId ? " (Variation ID: $variationId)" : ""));
+        $fallbackQuery = PurchaseItem::where('product_id', $productId)
+            ->where('stock_qty', '>', 0);
+        if ($effectiveBranchId) {
+            $fallbackQuery->where('branch_id', $effectiveBranchId);
+        }
+        $fallbackItems = $fallbackQuery->orderBy('date', 'asc')->orderBy('id', 'asc')->get();
+        foreach ($fallbackItems as $item) {
+            if ($remainingQty <= 0) break;
+
+            $availableQty = (float) $item->stock_qty;
+            $usedQty = min($remainingQty, $availableQty);
+
+            $item->stock_qty -= $usedQty;
+            $item->save();
+
+            if (!$product->unit || $product->unit->related_unit == null) {
+                $totalCost += $usedQty * $item->rate;
+            } else {
+                $relVal = ($product->unit->related_value > 0) ? (float) $product->unit->related_value : 1.0;
+                $totalCost += ($usedQty / $relVal) * $item->rate;
+            }
+
+            $remainingQty -= $usedQty;
+        }
+    }
+
+    if ($remainingQty > 0) {
+        $lastItem = PurchaseItem::where('product_id', $productId)->orderBy('id', 'desc')->first();
+        if ($lastItem) {
+            if (!$product->unit || $product->unit->related_unit == null) {
+                $totalCost += $remainingQty * $lastItem->rate;
+            } else {
+                $relVal = ($product->unit->related_value > 0) ? (float) $product->unit->related_value : 1.0;
+                $totalCost += ($remainingQty / $relVal) * $lastItem->rate;
+            }
+        }
     }
 
     return $totalCost;
@@ -2103,35 +2184,27 @@ function productStockUpdate($productId, $requiredQty, $variationId = null)
             $purchaseItem->update([
                 'stock_qty' => $purchaseItem->stock_qty + $requiredQty
             ]);
+            return;
         }
-        // else {
-        //     PurchaseItem::create([
-        //         'product_id' => $productId,
-        //         'product_variation_id' => $variationId,
-        //         'stock_qty' => $requiredQty,
-        //     ]);
-        // }
-
     }
-    // 🔥 CASE 2: Product without variation
-    else {
 
-        $purchaseItem = PurchaseItem::where('product_id', $productId)
-            ->whereNull('product_variation_id')
-            ->latest()
-            ->first();
+    // 🔥 CASE 2: Product without variation (or variation record not found)
+    $purchaseItem = PurchaseItem::where('product_id', $productId)
+        ->whereNull('product_variation_id')
+        ->latest()
+        ->first();
 
-        if ($purchaseItem) {
-            $purchaseItem->update([
-                'stock_qty' => $purchaseItem->stock_qty + $requiredQty
+    if ($purchaseItem) {
+        $purchaseItem->update([
+            'stock_qty' => $purchaseItem->stock_qty + $requiredQty
+        ]);
+    } else {
+        $anyPurchaseItem = PurchaseItem::where('product_id', $productId)->latest()->first();
+        if ($anyPurchaseItem) {
+            $anyPurchaseItem->update([
+                'stock_qty' => $anyPurchaseItem->stock_qty + $requiredQty
             ]);
         }
-        // else {
-        // PurchaseItem::create([
-        //     'product_id' => $productId,
-        //     'stock_qty' => $requiredQty,
-        // ]);
-        // }
     }
 }
 

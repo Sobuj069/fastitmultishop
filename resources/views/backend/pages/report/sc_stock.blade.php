@@ -672,23 +672,34 @@
                                             @endif
                                         </td>
                                         <td class="table_data_style_right">
-                                            @if ($data->product_variations->count() > 0)
+                                            @if (env('APP_SC') == 'yes' && $data->product_variations->count() > 0)
                                                 @php
+                                                    $userBranchId = auth()->user() ? auth()->user()->branch_id : 1;
+                                                    $filterBranchId = session('branch_filter_id', $userBranchId);
+                                                    $activeBranchId = ($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId;
+                                                    
                                                     $var_total = 0;
                                                     foreach ($data->product_variations as $variation) {
-                                                        $var_total += variation_stock($variation->id);
+                                                        $var_total += variation_stock($variation->id, $activeBranchId);
                                                     }
+
+                                                    $nonVarQuery = \App\Models\PurchaseItem::where('product_id', $data->id)->whereNull('product_variation_id');
+                                                    if ($activeBranchId) {
+                                                        $nonVarQuery->where('branch_id', $activeBranchId);
+                                                    }
+                                                    $nonVarStock = (float) $nonVarQuery->sum('stock_qty');
+                                                    $totalAvailableStock = $var_total + $nonVarStock;
                                                 @endphp
-                                                {{ $var_total }} {{ $data->unit->name ?? __('Pics') }}
+                                                {{ $totalAvailableStock }} {{ $data->unit->name ?? __('Pics') }}
                                                 <div class="d-print-none">
                                                     <button type="button" class="btn btn-xs btn-primary btn-view-variations mt-1" 
                                                             data-product="{{ $data->name }} - {{ $data->barcode }}"
                                                             data-category="{{ $data->category->name }}"
-                                                            data-variations="{{ json_encode($data->product_variations->map(function($v) {
+                                                            data-variations="{{ json_encode($data->product_variations->map(function($v) use ($activeBranchId) {
                                                                 return [
                                                                     'size' => $v->size?->size ?? 'N/A',
                                                                     'color' => $v->color?->color ?? 'N/A',
-                                                                    'stock' => variation_stock($v->id)
+                                                                    'stock' => variation_stock($v->id, $activeBranchId)
                                                                 ];
                                                             })) }}"
                                                             style="padding: 1px 5px; font-size: 10px; border-radius: 3px; background-color: #007bff; border-color: #007bff; color: #fff; cursor: pointer;">
@@ -699,9 +710,15 @@
                                                     @foreach ($data->product_variations as $v)
                                                         <div class="d-flex justify-content-between align-items-center" style="border-bottom: 1px solid #eee; padding: 2px 0;">
                                                             <span style="margin-right: 10px;">{{ $v->size?->size ?? 'N/A' }} - {{ $v->color?->color ?? 'N/A' }}</span>
-                                                            <strong>{{ variation_stock($v->id) }}</strong>
+                                                            <strong>{{ variation_stock($v->id, $activeBranchId) }}</strong>
                                                         </div>
                                                     @endforeach
+                                                    @if ($nonVarStock > 0)
+                                                        <div class="d-flex justify-content-between align-items-center" style="border-bottom: 1px solid #eee; padding: 2px 0;">
+                                                            <span style="margin-right: 10px;">{{ __('Standard (No Variation)') }}</span>
+                                                            <strong>{{ $nonVarStock }}</strong>
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             @else
                                                 {{ $stock_qty }}
