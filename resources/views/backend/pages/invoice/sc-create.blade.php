@@ -3592,7 +3592,7 @@
                                                 <span class="chp-name" style="font-weight:700; color:#0369a1; font-size:13px;"></span>
                                                 <button type="button" onclick="$(this).closest('.customer-history-panel').slideUp(200)" style="background:none;border:none;color:#94a3b8;font-size:16px;padding:0;line-height:1;cursor:pointer;">&times;</button>
                                             </div>
-                                            <div style="display:grid; grid-template-columns: repeat({{ trim(strtolower(env('APP_WARRANTY'))) == 'yes' ? 4 : 3 }}, 1fr); gap:6px; margin-bottom:10px;">
+                                            <div style="display:grid; grid-template-columns: repeat({{ trim(strtolower(env('APP_WARRANTY'))) == 'yes' ? 4 : 3 }}, 1fr); gap:6px;">
                                                 <div style="background:#fff; border-radius:8px; padding:6px 4px; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
                                                     <div class="chp-purchases" style="font-size:16px; font-weight:800; color:#0ea5e9;">-</div>
                                                     <div style="color:#64748b; font-size:10px;">{{ __('Purchases') }}</div>
@@ -3612,16 +3612,12 @@
                                                 </div>
                                                 @endif
                                             </div>
-                                            <div>
-                                                <div style="font-weight:600; color:#475569; font-size:11px; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">{{ __('Recent Purchases') }}</div>
-                                                <div class="chp-invoices-list"></div>
-                                            </div>
                                             <div style="margin-top:8px; padding-top:6px; border-top:1px dashed #bae6fd; display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px; color:#64748b; font-size:11px;">
                                                 <span>📞 <span class="chp-phone"></span></span>
                                                 @if(env('APP_CUSTOMER_DATE_DISCOUNT') == 'yes')
                                                     <span class="chp-card-wrap" style="display:none;">💳 <span class="chp-card"></span></span>
                                                 @endif
-                                                @if(env('APP_LOYALTY') == 'yes')
+                                                @if(is_loyalty_enabled())
                                                     <span>⭐ <span class="chp-points"></span> {{ __('Points') }}</span>
                                                 @endif
                                             </div>
@@ -4291,7 +4287,7 @@
                                             <span class="chp-name" style="font-weight:700; color:#0369a1; font-size:13px;"></span>
                                             <button type="button" onclick="$(this).closest('.customer-history-panel').slideUp(200)" style="background:none;border:none;color:#94a3b8;font-size:16px;padding:0;line-height:1;cursor:pointer;">&times;</button>
                                         </div>
-                                        <div style="display:grid; grid-template-columns: repeat({{ trim(strtolower(env('APP_WARRANTY'))) == 'yes' ? 4 : 3 }}, 1fr); gap:6px; margin-bottom:10px;">
+                                        <div style="display:grid; grid-template-columns: repeat({{ trim(strtolower(env('APP_WARRANTY'))) == 'yes' ? 4 : 3 }}, 1fr); gap:6px;">
                                             <div style="background:#fff; border-radius:8px; padding:6px 4px; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
                                                 <div class="chp-purchases" style="font-size:16px; font-weight:800; color:#0ea5e9;">-</div>
                                                 <div style="color:#64748b; font-size:10px;">{{ __('Purchases') }}</div>
@@ -4311,16 +4307,12 @@
                                             </div>
                                             @endif
                                         </div>
-                                        <div>
-                                            <div style="font-weight:600; color:#475569; font-size:11px; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">{{ __('Recent Purchases') }}</div>
-                                            <div class="chp-invoices-list"></div>
-                                        </div>
                                         <div style="margin-top:8px; padding-top:6px; border-top:1px dashed #bae6fd; display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px; color:#64748b; font-size:11px;">
                                             <span>📞 <span class="chp-phone"></span></span>
                                             @if(env('APP_CUSTOMER_DATE_DISCOUNT') == 'yes')
                                                 <span class="chp-card-wrap" style="display:none;">💳 <span class="chp-card"></span></span>
                                             @endif
-                                            @if(env('APP_LOYALTY') == 'yes')
+                                            @if(is_loyalty_enabled())
                                                 <span>⭐ <span class="chp-points"></span> {{ __('Points') }}</span>
                                             @endif
                                         </div>
