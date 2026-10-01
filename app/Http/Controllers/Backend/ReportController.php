@@ -198,12 +198,16 @@ class ReportController extends Controller
 
         if ($userBranchId == 1) {
             if ($filterBranchId) {
-                $data['suppliers'] = Supplier::where('branch_id', $filterBranchId)->orderBy('created_at', 'desc')->get();
+                $data['suppliers'] = Supplier::where(function ($q) use ($filterBranchId) {
+                    $q->where('branch_id', $filterBranchId)->orWhereNull('branch_id')->orWhere('id', 1);
+                })->orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('created_at', 'desc')->get();
             } else {
-                $data['suppliers'] = Supplier::orderBy('created_at', 'desc')->get();
+                $data['suppliers'] = Supplier::orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('created_at', 'desc')->get();
             }
         } else {
-            $data['suppliers'] = Supplier::where('branch_id', $userBranchId)->orderBy('created_at', 'desc')->get();
+            $data['suppliers'] = Supplier::where(function ($q) use ($userBranchId) {
+                $q->where('branch_id', $userBranchId)->orWhereNull('branch_id')->orWhere('id', 1);
+            })->orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('created_at', 'desc')->get();
         }
 
         if ($request->all() != NULL) {
@@ -246,9 +250,11 @@ class ReportController extends Controller
         $branchId = ($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId;
 
         if ($branchId) {
-            $data['customers'] = Customer::where('branch_id', $branchId)->orderBy('created_at', 'desc')->get();
+            $data['customers'] = Customer::where(function ($q) use ($branchId) {
+                $q->where('branch_id', $branchId)->orWhereNull('branch_id')->orWhere('id', 1);
+            })->orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('created_at', 'desc')->get();
         } else {
-            $data['customers'] = Customer::orderBy('created_at', 'desc')->get();
+            $data['customers'] = Customer::orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('created_at', 'desc')->get();
         }
 
         if ($request->all() != NULL) {
@@ -316,9 +322,11 @@ class ReportController extends Controller
         $branchId = ($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId;
 
         if ($branchId) {
-            $data['customers'] = Customer::where('branch_id', $branchId)->orderBy('name')->get();
+            $data['customers'] = Customer::where(function ($q) use ($branchId) {
+                $q->where('branch_id', $branchId)->orWhereNull('branch_id')->orWhere('id', 1);
+            })->orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('name')->get();
         } else {
-            $data['customers'] = Customer::orderBy('name')->get();
+            $data['customers'] = Customer::orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('name')->get();
         }
 
         $data['customer_id'] = $request->customer_id;

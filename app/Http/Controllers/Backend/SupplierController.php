@@ -23,16 +23,24 @@ class SupplierController extends Controller
         $userBranchId = auth()->user()->branch_id;
         $filterBranchId = session('branch_filter_id', auth()->user()->branch_id);
 
-        $query = Supplier::orderBy('id', 'desc');
+        $query = Supplier::orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('id', 'desc');
 
         if ($userBranchId == 1) {
             if ($filterBranchId) {
-                $query->where('branch_id', $filterBranchId);
+                $query->where(function ($q) use ($filterBranchId) {
+                    $q->where('branch_id', $filterBranchId)
+                      ->orWhereNull('branch_id')
+                      ->orWhere('id', 1);
+                });
             } else {
-                $data['suppliers'] = Supplier::orderBy('id', 'desc')->paginate(20);
+                $data['suppliers'] = Supplier::orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('id', 'desc')->paginate(20);
             }
         } else {
-            $query->where('branch_id', $userBranchId);
+            $query->where(function ($q) use ($userBranchId) {
+                $q->where('branch_id', $userBranchId)
+                  ->orWhereNull('branch_id')
+                  ->orWhere('id', 1);
+            });
         }
 
         if ($request->supplier_id != null) {

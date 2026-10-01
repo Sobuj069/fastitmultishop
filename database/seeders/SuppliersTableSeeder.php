@@ -18,7 +18,7 @@ class SuppliersTableSeeder extends Seeder
         // Insert only the system Walk-in Supplier
         DB::table('suppliers')->insertOrIgnore([
             [
-                'branch_id'      => 1,
+                'branch_id'      => null,
                 'date'           => now()->toDateString(),
                 'name'           => 'Walk-in Supplier',
                 'email'          => null,

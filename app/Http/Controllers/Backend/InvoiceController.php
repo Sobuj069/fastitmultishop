@@ -52,11 +52,13 @@ class InvoiceController extends Controller
         $filterBranchId = session('branch_filter_id', null);
 
         $query = Invoice::with('customer', 'user');
-        $custQuery = Customer::orderBy('name', 'asc');
+        $custQuery = Customer::orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('name', 'asc');
         if (!($userBranchId == 1 && !$filterBranchId)) {
             $custActiveBranchId = ($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId;
             $custQuery->where(function ($q) use ($custActiveBranchId) {
-                $q->where('branch_id', $custActiveBranchId)->orWhereNull('branch_id');
+                $q->where('branch_id', $custActiveBranchId)
+                  ->orWhereNull('branch_id')
+                  ->orWhere('id', 1);
             });
         }
         $data['allCustomer'] = $custQuery->get();
@@ -396,7 +398,8 @@ class InvoiceController extends Controller
         if (!($userBranchId == 1 && !$filterBranchId)) {
             $customerQuery->where(function ($q) use ($activeBranchId) {
                 $q->where('branch_id', $activeBranchId)
-                    ->orWhereNull('branch_id');
+                    ->orWhereNull('branch_id')
+                    ->orWhere('id', 1);
             });
         }
 
@@ -1808,7 +1811,9 @@ class InvoiceController extends Controller
         $custQuery = Customer::orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('id', 'desc');
         if (!($userBranchId == 1 && !$filterBranchId)) {
             $custQuery->where(function ($q) use ($activeBranchId) {
-                $q->where('branch_id', $activeBranchId)->orWhereNull('branch_id');
+                $q->where('branch_id', $activeBranchId)
+                  ->orWhereNull('branch_id')
+                  ->orWhere('id', 1);
             });
         }
         $data['customers'] = $custQuery->get();
@@ -2573,10 +2578,14 @@ class InvoiceController extends Controller
         });
 
         // Fetch Customers
-        $custQuery = Customer::select('id', 'name', 'phone', 'branch_id');
+        $custQuery = Customer::select('id', 'name', 'phone', 'branch_id')
+            ->orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")
+            ->orderBy('id', 'desc');
         if (!($userBranchId == 1 && !$filterBranchId)) {
             $custQuery->where(function ($q) use ($branchId) {
-                $q->where('branch_id', $branchId)->orWhereNull('branch_id');
+                $q->where('branch_id', $branchId)
+                  ->orWhereNull('branch_id')
+                  ->orWhere('id', 1);
             });
         }
         $customers = $custQuery->get();

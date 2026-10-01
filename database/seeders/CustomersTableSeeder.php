@@ -18,7 +18,7 @@ class CustomersTableSeeder extends Seeder
         // Insert only the system Walk-in Customer
         DB::table('customers')->insertOrIgnore([
             [
-                'branch_id'   => 1,
+                'branch_id'   => null,
                 'date'        => now()->toDateString(),
                 'member_id'   => null,
                 'name'        => 'Walk-in Customer',

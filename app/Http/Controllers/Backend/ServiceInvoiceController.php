@@ -55,11 +55,11 @@ class ServiceInvoiceController extends Controller
         }
 
         $data['invoices'] = $query->orderBy('created_at', 'desc')->paginate(20);
-        $custQuery = Customer::orderBy('name', 'asc');
+        $custQuery = Customer::orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('name', 'asc');
         $activeBranchId = ($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId;
         if (!($userBranchId == 1 && !$filterBranchId)) {
             $custQuery->where(function ($q) use ($activeBranchId) {
-                $q->where('branch_id', $activeBranchId)->orWhereNull('branch_id');
+                $q->where('branch_id', $activeBranchId)->orWhereNull('branch_id')->orWhere('id', 1);
             });
         }
         $data['allCustomer'] = $custQuery->get();
@@ -74,10 +74,10 @@ class ServiceInvoiceController extends Controller
         $filterBranchId = session('branch_filter_id', null);
         $activeBranchId = ($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId;
 
-        $custQuery = Customer::orderBy('name', 'asc');
+        $custQuery = Customer::orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('name', 'asc');
         if (!($userBranchId == 1 && !$filterBranchId)) {
             $custQuery->where(function ($q) use ($activeBranchId) {
-                $q->where('branch_id', $activeBranchId)->orWhereNull('branch_id');
+                $q->where('branch_id', $activeBranchId)->orWhereNull('branch_id')->orWhere('id', 1);
             });
         }
         $data['customers'] = $custQuery->get();

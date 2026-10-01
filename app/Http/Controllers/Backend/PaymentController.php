@@ -240,13 +240,17 @@ class PaymentController extends Controller
 
         if ($userBranchId == 1) {
             if ($filterBranchId) {
-                $data['suppliers'] = Supplier::where('branch_id', $filterBranchId)->orderBy('name', 'DESC')->get();
+                $data['suppliers'] = Supplier::where(function ($q) use ($filterBranchId) {
+                    $q->where('branch_id', $filterBranchId)->orWhereNull('branch_id')->orWhere('id', 1);
+                })->orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('name', 'ASC')->get();
                 $query->where('branch_id', $filterBranchId);
             } else {
-                $data['suppliers'] = Supplier::orderBy('name', 'DESC')->get();
+                $data['suppliers'] = Supplier::orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('name', 'ASC')->get();
             }
         } else {
-            $data['suppliers'] = Supplier::where('branch_id', $userBranchId)->orderBy('name', 'DESC')->get();
+            $data['suppliers'] = Supplier::where(function ($q) use ($userBranchId) {
+                $q->where('branch_id', $userBranchId)->orWhereNull('branch_id')->orWhere('id', 1);
+            })->orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")->orderBy('name', 'ASC')->get();
             $query->where('branch_id', $userBranchId);
         }
 

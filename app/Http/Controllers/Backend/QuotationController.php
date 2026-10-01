@@ -115,7 +115,7 @@ class QuotationController extends Controller
                 $customerQuery = Customer::orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")
                     ->orderBy('id', 'desc')
                     ->where(function ($q) use ($filterBranchId) {
-                        $q->where('branch_id', $filterBranchId)->orWhereNull('branch_id');
+                        $q->where('branch_id', $filterBranchId)->orWhereNull('branch_id')->orWhere('id', 1);
                     });
             } else {
                 $productsQuery = Product::with('unit:id,name,related_unit_id,related_value', 'unit.related_unit:id,name');
@@ -152,7 +152,7 @@ class QuotationController extends Controller
             $customerQuery = Customer::orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")
                 ->orderBy('id', 'desc')
                 ->where(function ($q) use ($userBranchId) {
-                    $q->where('branch_id', $userBranchId)->orWhereNull('branch_id');
+                    $q->where('branch_id', $userBranchId)->orWhereNull('branch_id')->orWhere('id', 1);
                 });
         }
 

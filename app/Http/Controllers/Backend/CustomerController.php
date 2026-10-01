@@ -57,23 +57,30 @@ class CustomerController extends Controller
         $userBranchId = auth()->user()->branch_id;
         $filterBranchId = session('branch_filter_id', auth()->user()->branch_id);
 
-        $query = Customer::with('discountGroup')->orderBy('id', 'asc');
+        $query = Customer::with('discountGroup')
+            ->orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")
+            ->orderBy('id', 'asc');
 
         if ($userBranchId == 1) {
             // Super admin
             if ($filterBranchId) {
                 $query->where(function ($q) use ($filterBranchId) {
                     $q->where('branch_id', $filterBranchId)
-                        ->orWhereNull('branch_id');
+                        ->orWhereNull('branch_id')
+                        ->orWhere('id', 1);
                 });
             } else {
-                $data['customers'] = Customer::with('discountGroup')->orderBy('id', 'asc')->paginate(20);
+                $data['customers'] = Customer::with('discountGroup')
+                    ->orderByRaw("CASE WHEN id = 1 THEN 0 ELSE 1 END")
+                    ->orderBy('id', 'asc')
+                    ->paginate(20);
             }
         } else {
             // Regular branch user
             $query->where(function ($q) use ($userBranchId) {
                 $q->where('branch_id', $userBranchId)
-                    ->orWhereNull('branch_id');
+                    ->orWhereNull('branch_id')
+                    ->orWhere('id', 1);
             });
         }
 
