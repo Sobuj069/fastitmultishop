@@ -105,14 +105,14 @@
                                         <td>{{ $data->name }} <br> {{ $data->phone }} <br>
                                             {{ $data->email == null ? 'NULL' : $data->email }}</td>
                                         <td>{{ $data->branch?->name }}</td>
-                                        <td class="font-weight-bold">{{ $pur_total }}
-                                            {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</td>
-                                        <td class="font-weight-bold">{{ $pur_paid }}
-                                            {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</td>
-                                        <td class="font-weight-bold">{{ $pur_due }}
-                                            {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</td>
-                                        <td class="font-weight-bold">{{ $open_balance }}
-                                            {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</td>
+                                        <td class="font-weight-bold">{{ number_format((float)$pur_total, 2) }}
+                                            {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</td>
+                                        <td class="font-weight-bold">{{ number_format((float)$pur_paid, 2) }}
+                                            {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</td>
+                                        <td class="font-weight-bold">{{ number_format((float)$pur_due, 2) }}
+                                            {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</td>
+                                        <td class="font-weight-bold">{{ number_format((float)$open_balance, 2) }}
+                                            {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</td>
                                         <td class="table_data_style_right">
                                             <div class="dropdown">
                                                 <button class="btn add_list_btn btn-sm dropdown-toggle" type="button"
@@ -153,19 +153,19 @@
                             <tfoot>
                                 <tr class="header_bg text-right">
                                     <td class="header_style_left" colspan="3"><strong
-                                            style="font-size: 18px;color:rgb(255, 255, 255);">{{ __('Total') }}({{ count($suppliers) }}):
+                                            style="font-size: 16px;color:rgb(255, 255, 255);">{{ __('Total') }}({{ count($suppliers) }}):
                                         </strong></td>
                                     <td> <strong
-                                            style="font-size: 18px;color:rgb(255, 255, 255);">{{ number_format($total_amount, 2) }}{{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</strong>
+                                            style="font-size: 16px;color:rgb(255, 255, 255);">{{ number_format($total_amount, 2) }} {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</strong>
                                     </td>
                                     <td> <strong
-                                            style="font-size: 18px;color:rgb(255, 255, 255);">{{ number_format($total_paid, 2) }}{{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</strong>
+                                            style="font-size: 16px;color:rgb(255, 255, 255);">{{ number_format($total_paid, 2) }} {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</strong>
                                     </td>
                                     <td> <strong
-                                            style="font-size: 18px;color:rgb(255, 255, 255);">{{ number_format($total_due, 2) }}{{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</strong>
+                                            style="font-size: 16px;color:rgb(255, 255, 255);">{{ number_format($total_due, 2) }} {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</strong>
                                     </td>
                                     <td> <strong
-                                            style="font-size: 18px;color:rgb(255, 255, 255);">{{ number_format($personal_balance, 2) }}{{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</strong>
+                                            style="font-size: 16px;color:rgb(255, 255, 255);">{{ number_format($personal_balance, 2) }} {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</strong>
                                     </td>
                                     <td class="header_style_right" colspan="1"></td>
                                 </tr>

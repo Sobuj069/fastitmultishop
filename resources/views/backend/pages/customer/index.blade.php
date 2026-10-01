@@ -143,14 +143,14 @@
                                             @endif
                                         </td>
                                         <td>{{ $data->branch?->name }}</td>
-                                        <td class="font-weight-bold">{{ $inv_total }}
-                                            {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</td>
-                                        <td class="font-weight-bold">{{ $inv_paid }}
-                                            {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</td>
-                                        <td class="font-weight-bold">{{ $inv_due }}
-                                            {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</td>
-                                        <td class="font-weight-bold">{{ $open_balance }}
-                                            {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</td>
+                                        <td class="font-weight-bold">{{ number_format((float)$inv_total, 2) }}
+                                            {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</td>
+                                        <td class="font-weight-bold">{{ number_format((float)$inv_paid, 2) }}
+                                            {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</td>
+                                        <td class="font-weight-bold">{{ number_format((float)$inv_due, 2) }}
+                                            {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</td>
+                                        <td class="font-weight-bold">{{ number_format((float)$open_balance, 2) }}
+                                            {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</td>
                                         @if(is_loyalty_enabled())
                                         <td class="font-weight-bold">
                                             <span class="badge badge-warning text-dark px-2 py-1" style="background-color: #fef08a; border: 1px solid #fde047; font-size: 12px;">
@@ -213,21 +213,24 @@
                             <tfoot>
                                 <tr class="header_bg text-right">
                                     <td class="header_style_left" colspan="3"><strong
-                                            style="font-size: 18px;color:rgb(255, 255, 255);">{{ __('Total') }}({{ count($customers) }}):
+                                            style="font-size: 16px;color:rgb(255, 255, 255);">{{ __('Total') }}({{ count($customers) }}):
                                         </strong></td>
                                     <td> <strong
-                                            style="font-size: 18px;color:rgb(255, 255, 255);">{{ number_format($total_amount, 2) }}{{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</strong>
+                                            style="font-size: 16px;color:rgb(255, 255, 255);">{{ number_format($total_amount, 2) }} {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</strong>
                                     </td>
                                     <td> <strong
-                                            style="font-size: 18px;color:rgb(255, 255, 255);">{{ number_format($total_paid, 2) }}{{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</strong>
+                                            style="font-size: 16px;color:rgb(255, 255, 255);">{{ number_format($total_paid, 2) }} {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</strong>
                                     </td>
                                     <td> <strong
-                                            style="font-size: 18px;color:rgb(255, 255, 255);">{{ number_format($total_due, 2) }}{{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</strong>
+                                            style="font-size: 16px;color:rgb(255, 255, 255);">{{ number_format($total_due, 2) }} {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</strong>
                                     </td>
                                     <td> <strong
-                                            style="font-size: 18px;color:rgb(255, 255, 255);">{{ number_format($personal_balance, 2) }}{{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</strong>
+                                            style="font-size: 16px;color:rgb(255, 255, 255);">{{ number_format($personal_balance, 2) }} {{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</strong>
                                     </td>
-                                    <td class="header_style_right" colspan="1"></td>
+                                    @if(is_loyalty_enabled())
+                                    <td></td>
+                                    @endif
+                                    <td class="header_style_right"></td>
                                 </tr>
                             </tfoot>
                         </table>
