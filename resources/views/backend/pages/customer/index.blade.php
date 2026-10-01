@@ -90,7 +90,7 @@
                                     <th>{{ __('Paid Invoice') }}</th>
                                     <th>{{ __('Due Invoice') }}</th>
                                     <th>{{ __('Personal Balance') }}</th>
-                                    @if(env('APP_LOYALTY') == 'yes')
+                                    @if(is_loyalty_enabled())
                                         <th>{{ __('Reward Points') }}</th>
                                     @endif
                                     <th class="header_style_right">{{ __('Action') }}</th>
@@ -151,11 +151,11 @@
                                             {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</td>
                                         <td class="font-weight-bold">{{ $open_balance }}
                                             {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</td>
-                                        @if(env('APP_LOYALTY') == 'yes')
+                                        @if(is_loyalty_enabled())
                                         <td class="font-weight-bold">
                                             <span class="badge badge-warning text-dark px-2 py-1" style="background-color: #fef08a; border: 1px solid #fde047; font-size: 12px;">
                                                 <i class="fa fa-star text-warning mr-1"></i>{{ number_format((float)$data->total_point, 0) }} pts
-                                                <br><small class="text-muted">(৳{{ number_format((float)$data->total_point * 0.75, 2) }})</small>
+                                                <br><small class="text-muted">(৳{{ number_format((float)$data->total_point * loyalty_point_rate(), 2) }})</small>
                                             </span>
                                         </td>
                                         @endif

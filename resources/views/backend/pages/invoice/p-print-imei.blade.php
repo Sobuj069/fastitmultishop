@@ -697,14 +697,15 @@
                                 </tfoot>
                             </table>
 
-                             @if (env('APP_LOYALTY') == 'yes' && $invoice->customer_id != 1 && ((float)($invoice->inv_point ?? 0) > 0 || (float)($invoice->pay_point ?? 0) > 0 || (float)($invoice->total_point ?? $invoice->customer?->total_point ?? 0) > 0))
+                             @if (is_loyalty_enabled() && $invoice->customer_id != 1 && ((float)($invoice->inv_point ?? 0) > 0 || (float)($invoice->pay_point ?? 0) > 0 || (float)($invoice->total_point ?? $invoice->customer?->total_point ?? 0) > 0))
                                  @php
+                                     $pointRate = loyalty_point_rate();
                                      $usedPts = (float)($invoice->pay_point ?? 0);
                                      $earnedPts = (float)($invoice->inv_point ?? 0);
                                      $remPts = (float)($invoice->total_point ?? $invoice->customer?->total_point ?? 0);
                                      $prevPts = max(0, $remPts + $usedPts - $earnedPts);
-                                     $usedTk = round($usedPts * 0.75, 2);
-                                     $remTk = round($remPts * 0.75, 2);
+                                     $usedTk = round($usedPts * $pointRate, 2);
+                                     $remTk = round($remPts * $pointRate, 2);
                                  @endphp
                                  <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; margin: 8px 0; padding: 5px 0; font-size: 11px; font-weight: 500;">
                                      <div style="text-align: center; font-weight: bold; text-transform: uppercase; margin-bottom: 3px;">

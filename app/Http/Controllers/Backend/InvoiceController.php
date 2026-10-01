@@ -520,13 +520,16 @@ class InvoiceController extends Controller
             $invoice->vehicle_reg_no = $request->vehicle_reg_no;
         }
 
+        $pointRate = loyalty_point_rate();
         $pay_point = (float)($request->pay_point ?? 0);
-        $pay_point_amount = round($pay_point * 0.75, 2);
+        $pay_point_amount = round($pay_point * $pointRate, 2);
 
-        if (env('APP_LOYALTY') == 'yes' && $request->customer_id != 1) {
+        if (is_loyalty_enabled() && $request->customer_id != 1) {
             $customer = Customer::where('id', $request->customer_id)->first();
             if ($customer && $customer->id != 1) {
-                $earned_point = floor((float)($request->payable_amount ?? 0) / 100);
+                $spendPerPoint = loyalty_spend_per_point();
+                $pointPerSpend = loyalty_point_per_spend();
+                $earned_point = floor((float)($request->payable_amount ?? 0) / $spendPerPoint) * $pointPerSpend;
                 $new_total_point = max(0, (float)$customer->total_point - $pay_point + $earned_point);
 
                 Customer::where('id', $request->customer_id)->update([
@@ -2397,7 +2400,7 @@ class InvoiceController extends Controller
                         }
                         $bank_transaction->bank_id = $request->bank_id;
                         $bank_transaction->invoice_id = $id;
-                        $pay_point_amount = round(((float)($request->pay_point ?? 0)) * 0.75, 2);
+                        $pay_point_amount = round(((float)($request->pay_point ?? 0)) * loyalty_point_rate(), 2);
                         $bank_transaction->amount = (float)$request->paid_amount - (float)($request->balance ?? 0) - $pay_point_amount;
                         $bank_transaction->created_by = auth()->user()->id;
                         $bank_transaction->save();
@@ -2427,7 +2430,7 @@ class InvoiceController extends Controller
                     $amounts = $request->input('amounts', []);
                     if (is_array($amounts)) {
                         $totalAllocated = array_sum(array_map('floatval', $amounts));
-                        $pay_point_amount = round(((float)($request->pay_point ?? 0)) * 0.75, 2);
+                        $pay_point_amount = round(((float)($request->pay_point ?? 0)) * loyalty_point_rate(), 2);
                         $actualPayable = (float)$request->paid_amount - (float)($request->balance ?? 0) - $pay_point_amount;
                         $ratio = ($totalAllocated > 0 && abs($totalAllocated - $actualPayable) > 0.01) ? ($actualPayable / $totalAllocated) : 1;
 

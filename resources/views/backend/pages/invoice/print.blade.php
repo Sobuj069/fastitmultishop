@@ -806,14 +806,15 @@
                                 <br><br><span style="text-transform: none; font-style: italic; font-weight: normal;">Note: {{ $invoice->note }}</span>
                             @endif
 
-                            @if (env('APP_LOYALTY') == 'yes' && $invoice->customer_id != 1 && ((float)($invoice->inv_point ?? 0) > 0 || (float)($invoice->pay_point ?? 0) > 0 || (float)($invoice->total_point ?? $invoice->customer?->total_point ?? 0) > 0))
+                            @if (is_loyalty_enabled() && $invoice->customer_id != 1 && ((float)($invoice->inv_point ?? 0) > 0 || (float)($invoice->pay_point ?? 0) > 0 || (float)($invoice->total_point ?? $invoice->customer?->total_point ?? 0) > 0))
                                 @php
+                                    $pointRate = loyalty_point_rate();
                                     $usedPts = (float)($invoice->pay_point ?? 0);
                                     $earnedPts = (float)($invoice->inv_point ?? 0);
                                     $remPts = (float)($invoice->total_point ?? $invoice->customer?->total_point ?? 0);
                                     $prevPts = max(0, $remPts + $usedPts - $earnedPts);
-                                    $usedTk = round($usedPts * 0.75, 2);
-                                    $remTk = round($remPts * 0.75, 2);
+                                    $usedTk = round($usedPts * $pointRate, 2);
+                                    $remTk = round($remPts * $pointRate, 2);
                                 @endphp
                                 <div style="border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 6px; margin-top: 15px; padding: 8px 12px; font-size: 11px; width: 100%; box-sizing: border-box;">
                                     <div style="font-weight: bold; text-transform: uppercase; font-size: 11px; color: #1e293b; margin-bottom: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px;">

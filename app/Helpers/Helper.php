@@ -3010,5 +3010,77 @@ if (!function_exists('invoiceHasRepurchasedImeis')) {
     }
 }
 
+if (!function_exists('is_loyalty_enabled')) {
+    /**
+     * Check if Customer Loyalty Points & Rewards system is enabled.
+     *
+     * @return bool
+     */
+    function is_loyalty_enabled()
+    {
+        $setting = function_exists('get_setting') ? get_setting('app_loyalty') : null;
+        if ($setting !== null && $setting !== '') {
+            return in_array(strtolower(trim($setting)), ['yes', '1', 'true', 'on']);
+        }
+        return in_array(strtolower(trim(env('APP_LOYALTY', 'no'))), ['yes', '1', 'true', 'on']);
+    }
+}
+
+if (!function_exists('loyalty_spend_per_point')) {
+    /**
+     * Spending amount (in currency) required to earn points.
+     * Default: 100 Taka
+     *
+     * @return float
+     */
+    function loyalty_spend_per_point()
+    {
+        $val = function_exists('get_setting') ? get_setting('loyalty_spend_per_point') : null;
+        return ($val !== null && $val !== '' && (float)$val > 0) ? (float)$val : 100.0;
+    }
+}
+
+if (!function_exists('loyalty_point_per_spend')) {
+    /**
+     * Number of points earned per spending amount.
+     * Default: 1 Point
+     *
+     * @return float
+     */
+    function loyalty_point_per_spend()
+    {
+        $val = function_exists('get_setting') ? get_setting('loyalty_point_per_spend') : null;
+        return ($val !== null && $val !== '' && (float)$val > 0) ? (float)$val : 1.0;
+    }
+}
+
+if (!function_exists('loyalty_point_rate')) {
+    /**
+     * Monetary value (in currency) per 1 point when redeemed at checkout.
+     * Default: 0.75 Taka
+     *
+     * @return float
+     */
+    function loyalty_point_rate()
+    {
+        $val = function_exists('get_setting') ? get_setting('loyalty_point_rate') : null;
+        return ($val !== null && $val !== '' && (float)$val > 0) ? (float)$val : 0.75;
+    }
+}
+
+if (!function_exists('loyalty_min_redeem_points')) {
+    /**
+     * Minimum points required before a customer can redeem points.
+     * Default: 0 Points
+     *
+     * @return float
+     */
+    function loyalty_min_redeem_points()
+    {
+        $val = function_exists('get_setting') ? get_setting('loyalty_min_redeem_points') : null;
+        return ($val !== null && $val !== '' && (float)$val >= 0) ? (float)$val : 0.0;
+    }
+}
+
 
 

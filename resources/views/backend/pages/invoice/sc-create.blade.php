@@ -3736,11 +3736,11 @@
                                                 <label>{{ __('PAY AMOUNT') }}</label>
                                                 <input type="number" step="any" class="form-control pay_amount" name="pay_amount" min="0" placeholder="0.00">
                                             </div>
-                                            @if(env('APP_LOYALTY') == 'yes')
+                                            @if(is_loyalty_enabled())
                                             <!-- PAY WITH POINTS -->
                                             <div class="checkout-col" id="pay_point_col" style="display: none;">
                                                 <label style="color: #ea580c; font-weight: 700;">
-                                                    <i class="fa fa-star text-warning"></i>  {{ __('POINTS (1pt=৳0.75)') }} 
+                                                    <i class="fa fa-star text-warning"></i>  {{ __('POINTS (1pt=৳' . loyalty_point_rate() . ')') }} 
                                                 </label>
                                                 <div class="input-group">
                                                     <input type="number" step="1" min="0" class="form-control pay_point" name="pay_point" value="0" placeholder="0 pts" style="border-color: #f97316; font-weight: bold; color: #ea580c;">
@@ -4434,11 +4434,11 @@
                                                 <label>{{ __('PAY AMOUNT') }}</label>
                                                 <input type="number" step="any" class="form-control pay_amount" name="pay_amount" min="0" placeholder="0.00">
                                             </div>
-                                            @if(env('APP_LOYALTY') == 'yes')
+                                            @if(is_loyalty_enabled())
                                             <!-- PAY WITH POINTS -->
                                             <div class="checkout-col" id="pay_point_col" style="display: none;">
                                                 <label style="color: #ea580c; font-weight: 700;">
-                                                    <i class="fa fa-star text-warning"></i>  {{ __('POINTS (1pt=৳0.75)') }} 
+                                                    <i class="fa fa-star text-warning"></i>  {{ __('POINTS (1pt=৳' . loyalty_point_rate() . ')') }} 
                                                 </label>
                                                 <div class="input-group">
                                                     <input type="number" step="1" min="0" class="form-control pay_point" name="pay_point" value="0" placeholder="0 pts" style="border-color: #f97316; font-weight: bold; color: #ea580c;">
@@ -5320,7 +5320,8 @@
 
     <script>
         $(document).ready(function() {
-            var appLoyaltyEnabled = "{{ env('APP_LOYALTY') == 'yes' ? 'yes' : 'no' }}";
+            var appLoyaltyEnabled = "{{ is_loyalty_enabled() ? 'yes' : 'no' }}";
+            window.currentPointRate = {{ loyalty_point_rate() }};
 
             function updateTotalPoint() {
                 if (appLoyaltyEnabled !== 'yes') {
@@ -5338,7 +5339,8 @@
                         type: 'GET',
                         success: function(response) {
                             var totalPoint = response.total_point ? parseFloat(response.total_point) : 0;
-                            var pointRate = response.point_rate ? parseFloat(response.point_rate) : 0.75;
+                            var pointRate = response.point_rate ? parseFloat(response.point_rate) : {{ loyalty_point_rate() }};
+                            window.currentPointRate = pointRate;
                             var pointValue = (totalPoint * pointRate).toFixed(2);
 
                             $('.total_point').text(totalPoint);
@@ -5386,7 +5388,7 @@
                 e.preventDefault();
                 var payableAmount = parseFloat($('#payable_amount').val()) || 0;
                 var availablePoints = parseFloat($('.pay_point').attr('max')) || 0;
-                var pointRate = 0.75;
+                var pointRate = window.currentPointRate || {{ loyalty_point_rate() }};
 
                 var neededPoints = Math.ceil(payableAmount / pointRate);
                 var pointsToUse = Math.min(availablePoints, neededPoints);
@@ -7793,7 +7795,8 @@
             // Direct Paid Amount: By default, automatically populate pay_amount with the net payable amount
             if (!window.isFullDueManual && !$('#is_installment').is(':checked')) {
                 let payPoint = parseFloat($('.pay_point').val()) || 0;
-                let pointTkValue = Math.min(total_amount, payPoint * 0.75);
+                let pointRate = window.currentPointRate || {{ loyalty_point_rate() }};
+                let pointTkValue = Math.min(total_amount, payPoint * pointRate);
                 let needed = total_amount - pointTkValue;
                 let finalNeeded = needed > 0 ? needed : 0;
                 $('.pay_amount').val(finalNeeded > 0 ? finalNeeded.toFixed(2) : (total_amount > 0 ? total_amount.toFixed(2) : '0.00'));
@@ -8995,7 +8998,7 @@
         function updateInlineAmounts() {
             var payableAmount = parseFloat($('#payable_amount').val()) || 0;
             var payPoint     = parseFloat($('.pay_point').val()) || 0;
-            var pointRate    = 0.75;
+            var pointRate    = window.currentPointRate || {{ loyalty_point_rate() }};
             var pointTkValue = Math.min(payableAmount, payPoint * pointRate);
 
             if (payPoint > 0) {
@@ -9056,7 +9059,8 @@
             window.isFullDueManual = false;
             var payable = parseFloat($('#payable_amount').val()) || 0;
             var payPoint = parseFloat($('.pay_point').val()) || 0;
-            var pointTkValue = Math.min(payable, payPoint * 0.75);
+            var pointRate = window.currentPointRate || {{ loyalty_point_rate() }};
+            var pointTkValue = Math.min(payable, payPoint * pointRate);
             var needed = payable - pointTkValue;
             var finalNeeded = needed > 0 ? needed : 0;
             $('.pay_amount').val(finalNeeded.toFixed(2));

@@ -66,6 +66,7 @@ use App\Http\Controllers\Backend\LeaveApplicationController;
 use App\Http\Controllers\Backend\AttendanceController;
 use App\Http\Controllers\Backend\SuperAdminSettingsController;
 use App\Http\Controllers\Backend\PreOrderController;
+use App\Http\Controllers\Backend\LoyaltySettingController;
 
 
 Route::get('/', function () {
@@ -227,18 +228,25 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::post('employee/payment/{id}', 'PaymentStore')->name('employee.payment.store');
     });
 
+    // Customer Loyalty & Rewards Settings
+    Route::controller(LoyaltySettingController::class)->prefix('customer-loyalty-reward')->name('customer.loyalty.')->group(function () {
+        Route::get('/setting', 'index')->name('setting');
+        Route::post('/setting', 'update')->name('setting.update');
+    });
+
     Route::get('/customer/points/{id}', function ($id) {
-        if (env('APP_LOYALTY') != 'yes') {
-            return response()->json(['total_point' => 0, 'point_rate' => 0.75, 'point_value' => 0]);
+        if (!is_loyalty_enabled()) {
+            return response()->json(['total_point' => 0, 'point_rate' => loyalty_point_rate(), 'point_value' => 0]);
         }
         $customer = Customer::find($id);
         $points = $customer ? (float)$customer->total_point : 0;
-        $rate = 0.75;
+        $rate = loyalty_point_rate();
         $value = round($points * $rate, 2);
         return response()->json([
-            'total_point' => $points,
-            'point_rate'  => $rate,
-            'point_value' => $value
+            'total_point'       => $points,
+            'point_rate'        => $rate,
+            'point_value'       => $value,
+            'min_redeem_points' => loyalty_min_redeem_points(),
         ]);
     });
 
