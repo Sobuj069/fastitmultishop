@@ -875,7 +875,7 @@
             if (data.variations && data.variations.length > 0) {
                 variation_data += `<input type="text" class="has_size" data-has-size="true" hidden>
                 <select name="variation_id[]" class="form-control size" required>
-                <option value="">{{ __('Select Variation') }}</option>`;
+                <option value="">{{ __('Select Variation *') }}</option>`;
 
                 $.each(data.variations, function(idx, value) {
                     if (parseFloat(value.stock) <= 0) return;
@@ -1138,6 +1138,38 @@
                     position: "topRight",
                 });
                 $('#product_search').focus();
+                return false;
+            }
+
+            var hasVariationError = false;
+            var missingVarName = '';
+            var $firstInvalidSelect = null;
+
+            $("#tbody tr").each(function() {
+                var hasSize = $(this).find('.has_size').attr('data-has-size') === "true" || 
+                              $(this).find('.has_size').val() === "true";
+                var varSelect = $(this).find('select[name="variation_id[]"]');
+                
+                if (hasSize && varSelect.length > 0) {
+                    var selectedVal = varSelect.val();
+                    if (!selectedVal || selectedVal === '') {
+                        hasVariationError = true;
+                        missingVarName = $(this).find('.name').val() || $(this).find('td:first').text().replace(/\s+/g, ' ').trim();
+                        $firstInvalidSelect = varSelect;
+                        return false;
+                    }
+                }
+            });
+
+            if (hasVariationError) {
+                iziToast.error({
+                    title: "{{ __('Variation Required') }}",
+                    message: "{{ __('Please select a variation for:') }} " + missingVarName,
+                    position: "topRight"
+                });
+                if ($firstInvalidSelect) {
+                    $firstInvalidSelect.focus();
+                }
                 return false;
             }
 

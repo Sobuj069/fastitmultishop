@@ -37,7 +37,16 @@ class StockAuditorService
         };
 
         // 1. Calculate Inflows
-        $purchases = $getSum(PurchaseItem::class);
+        $purchasesItems = PurchaseItem::where('product_id', $productId)
+            ->whereHas('purchase', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->whereNull('is_transfer')->orWhere('is_transfer', 0);
+                });
+            })->get(['main_qty', 'sub_qty']);
+        $purchases = 0;
+        foreach ($purchasesItems as $item) {
+            $purchases += (($item->main_qty ?? 0) * $relatedValue) + ($item->sub_qty ?? 0);
+        }
         $salesReturns = $getSum(ReturnItem::class);
         $adjustIn = $getSum(AdjustStockItem::class, ['stock_status' => 1]);
         $transferIn = $getSum(TransferItem::class, ['status' => 1]); // Assuming status 1 is received

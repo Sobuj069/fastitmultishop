@@ -645,14 +645,22 @@ class ReportController extends Controller
 
         if ($userBranchId == 1) {
             if ($filterBranchId) {
-                $purchaseItems = PurchaseItem::where('branch_id', $filterBranchId)->whereBetween('date', [$sdate, $edate])->get();
+                $purchaseItems = PurchaseItem::whereHas('purchase', function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->whereNull('is_transfer')->orWhere('is_transfer', 0);
+                    });
+                })->where('branch_id', $filterBranchId)->whereBetween('date', [$sdate, $edate])->get();
                 $transferItems = TransferItem::where('from_branch_id', $filterBranchId)->whereBetween('date', [$sdate, $edate])->get();
                 $receiveItems = TransferItem::where('status', 1)->where('to_branch_id', $filterBranchId)->whereBetween('date', [$sdate, $edate])->get();
                 $invoiceItems  = InvoiceItem::filterByFakeSale(InvoiceItem::where('branch_id', $filterBranchId)->whereBetween('date', [$sdate, $edate]));
                 $returnItems   = ReturnItem::filterByFakeSale(ReturnItem::where('branch_id', $filterBranchId)->whereBetween('date', [$sdate, $edate]));
                 $damageItems   = DamageItem::where('branch_id', $filterBranchId)->whereBetween('date', [$sdate, $edate])->get();
             } else {
-                $purchaseItems = PurchaseItem::whereBetween('date', [$sdate, $edate])->get();
+                $purchaseItems = PurchaseItem::whereHas('purchase', function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->whereNull('is_transfer')->orWhere('is_transfer', 0);
+                    });
+                })->whereBetween('date', [$sdate, $edate])->get();
                 $transferItems = TransferItem::whereBetween('date', [$sdate, $edate])->get();
                 $receiveItems = TransferItem::where('status', 1)->whereBetween('date', [$sdate, $edate])->get();
                 $invoiceItems  = InvoiceItem::filterByFakeSale(InvoiceItem::whereBetween('date', [$sdate, $edate]));
@@ -660,7 +668,11 @@ class ReportController extends Controller
                 $damageItems   = DamageItem::whereBetween('date', [$sdate, $edate])->get();
             }
         } else {
-            $purchaseItems = PurchaseItem::where('branch_id', $userBranchId)->whereBetween('date', [$sdate, $edate])->get();
+            $purchaseItems = PurchaseItem::whereHas('purchase', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->whereNull('is_transfer')->orWhere('is_transfer', 0);
+                });
+            })->where('branch_id', $userBranchId)->whereBetween('date', [$sdate, $edate])->get();
             $transferItems = TransferItem::where('from_branch_id', $userBranchId)->whereBetween('date', [$sdate, $edate])->get();
             $receiveItems = TransferItem::where('status', 1)->where('to_branch_id', $userBranchId)->whereBetween('date', [$sdate, $edate])->get();
             $invoiceItems  = InvoiceItem::filterByFakeSale(InvoiceItem::where('branch_id', $userBranchId)->whereBetween('date', [$sdate, $edate]));

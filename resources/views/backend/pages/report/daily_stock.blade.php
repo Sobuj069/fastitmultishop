@@ -106,6 +106,7 @@
 
                                             $stock =
                                                 $q['purchase'] +
+                                                $q['receive'] +
                                                 $q['return'] -
                                                 ($q['transfer'] + $q['invoice'] + $q['damage']);
 

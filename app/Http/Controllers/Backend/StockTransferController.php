@@ -87,7 +87,80 @@ class StockTransferController extends Controller
      */
     public function store(Request $request)
     {
-        // dd($request->all());
+        $request->validate([
+            'date' => 'required',
+            'to_branch_id' => 'required',
+            'product_id' => 'required|array|min:1',
+        ]);
+
+        $userBranchId = auth()->user()->branch_id;
+        $fromBranchId = $userBranchId == 1 ? $request->from_branch_id : $userBranchId;
+
+        if ($fromBranchId == $request->to_branch_id) {
+            session()->flash('error', __('From branch and To branch cannot be the same.'));
+            return redirect()->back()->withInput();
+        }
+
+        // Validate each product, variation requirement, and stock availability before creating transfer
+        foreach ($request->product_id as $key => $product_id) {
+            $product = Product::with('product_variations.size', 'product_variations.color', 'unit')->find($product_id);
+            if (!$product) {
+                session()->flash('error', __('Product not found.'));
+                return redirect()->back()->withInput();
+            }
+
+            $mainQty = (float) ($request->main_qty[$key] ?? 0);
+            $subQty  = (float) ($request->sub_qty[$key] ?? 0);
+            if ($product->is_service == 0 && $product->unit && $product->unit->related_unit != null) {
+                $totalQty = ($mainQty * (float)$product->unit->related_value) + $subQty;
+            } else {
+                $totalQty = $mainQty;
+            }
+
+            if ($totalQty <= 0) {
+                session()->flash('error', __('Transfer quantity must be greater than zero for product ":name".', ['name' => $product->name]));
+                return redirect()->back()->withInput();
+            }
+
+            $hasVariations = $product->product_variations && $product->product_variations->count() > 0;
+            $variation_id = $request->variation_id[$key] ?? null;
+
+            if ($hasVariations) {
+                if (empty($variation_id)) {
+                    session()->flash('error', __('Stock Transfer Error: Product ":name" has variations. You must select a variation to transfer!', ['name' => $product->name]));
+                    return redirect()->back()->withInput();
+                }
+
+                $variation = $product->product_variations->firstWhere('id', $variation_id);
+                if (!$variation) {
+                    session()->flash('error', __('Invalid variation selected for product ":name".', ['name' => $product->name]));
+                    return redirect()->back()->withInput();
+                }
+
+                $varStock = variation_stock($variation_id, $fromBranchId);
+                if ($varStock < $totalQty) {
+                    $varName = trim(($variation->size?->size ?? '') . ' ' . ($variation->color?->color ?? ''));
+                    session()->flash('error', __('Stock Out Error: Variation ":var" of product ":prod" has only :avail in stock, but :req requested for transfer!', [
+                        'var' => $varName ?: "#{$variation_id}",
+                        'prod' => $product->name,
+                        'avail' => $varStock,
+                        'req' => $totalQty
+                    ]));
+                    return redirect()->back()->withInput();
+                }
+            } else {
+                $prodStock = (float) product_fake_stock_val($product, $fromBranchId);
+                if ($prodStock < $totalQty) {
+                    session()->flash('error', __('Stock Out Error: Product ":prod" has only :avail in stock, but :req requested for transfer!', [
+                        'prod' => $product->name,
+                        'avail' => product_stock($product, $fromBranchId),
+                        'req' => $totalQty
+                    ]));
+                    return redirect()->back()->withInput();
+                }
+            }
+        }
+
         $last_transfer_id = Transfer::orderBy('id', 'DESC')->select('transfer_no')->first();
         if ($last_transfer_id == null) {
             $transfer_no = "TNO-0000001";
@@ -95,9 +168,6 @@ class StockTransferController extends Controller
             $transfer_no = $last_transfer_id->transfer_no;
             $transfer_no++;
         }
-
-        $userBranchId = auth()->user()->branch_id;
-        $fromBranchId = $userBranchId == 1 ? $request->from_branch_id : $userBranchId;
         
         $transfer = new Transfer();
         $transfer->date = $request->date;

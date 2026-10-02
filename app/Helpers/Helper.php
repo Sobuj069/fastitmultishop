@@ -723,21 +723,33 @@ if (!function_exists('purchased_qty')) {
             if ($product->unit->related_unit  == null) {
                 if ($userBranchId == 1) {
                     if ($filterBranchId) {
-                        $pur_stock = PurchaseItem::with('purchase')
+                        $pur_stock = PurchaseItem::whereHas('purchase', function ($q) {
+                                $q->where(function ($sub) {
+                                    $sub->whereNull('is_transfer')->orWhere('is_transfer', 0);
+                                });
+                            })
                             ->where('branch_id', $filterBranchId)
                             ->where('product_id', $product->id)
                             ->sum('main_qty');
                         $total_stock = (float)($pur_stock);
                         $data['stock_qty'] = $total_stock . ' ' . $product->unit->name;
                     } else {
-                        $pur_stock = PurchaseItem::with('purchase')
+                        $pur_stock = PurchaseItem::whereHas('purchase', function ($q) {
+                                $q->where(function ($sub) {
+                                    $sub->whereNull('is_transfer')->orWhere('is_transfer', 0);
+                                });
+                            })
                             ->where('product_id', $product->id)
                             ->sum('main_qty');
                         $total_stock = (float)($pur_stock);
                         $data['stock_qty'] = $total_stock . ' ' . $product->unit->name;
                     }
                 } else {
-                    $pur_stock = PurchaseItem::with('purchase')
+                    $pur_stock = PurchaseItem::whereHas('purchase', function ($q) {
+                            $q->where(function ($sub) {
+                                $sub->whereNull('is_transfer')->orWhere('is_transfer', 0);
+                            });
+                        })
                         ->where('branch_id', $userBranchId)
                         ->where('product_id', $product->id)
                         ->sum('main_qty');
@@ -747,28 +759,52 @@ if (!function_exists('purchased_qty')) {
             } else {
                 if ($userBranchId == 1) {
                     if ($filterBranchId) {
-                        $pur_stock_main = PurchaseItem::with('purchase')
+                        $pur_stock_main = PurchaseItem::whereHas('purchase', function ($q) {
+                                $q->where(function ($sub) {
+                                    $sub->whereNull('is_transfer')->orWhere('is_transfer', 0);
+                                });
+                            })
                             ->where('branch_id', $filterBranchId)
                             ->where('product_id', $product->id)
                             ->sum('main_qty');
-                        $pur_stock_sub = PurchaseItem::with('purchase')
+                        $pur_stock_sub = PurchaseItem::whereHas('purchase', function ($q) {
+                                $q->where(function ($sub) {
+                                    $sub->whereNull('is_transfer')->orWhere('is_transfer', 0);
+                                });
+                            })
                             ->where('branch_id', $filterBranchId)
                             ->where('product_id', $product->id)
                             ->sum('sub_qty');
                     } else {
-                        $pur_stock_main = PurchaseItem::with('purchase')
+                        $pur_stock_main = PurchaseItem::whereHas('purchase', function ($q) {
+                                $q->where(function ($sub) {
+                                    $sub->whereNull('is_transfer')->orWhere('is_transfer', 0);
+                                });
+                            })
                             ->where('product_id', $product->id)
                             ->sum('main_qty');
-                        $pur_stock_sub = PurchaseItem::with('purchase')
+                        $pur_stock_sub = PurchaseItem::whereHas('purchase', function ($q) {
+                                $q->where(function ($sub) {
+                                    $sub->whereNull('is_transfer')->orWhere('is_transfer', 0);
+                                });
+                            })
                             ->where('product_id', $product->id)
                             ->sum('sub_qty');
                     }
                 } else {
-                    $pur_stock_main = PurchaseItem::with('purchase')
+                    $pur_stock_main = PurchaseItem::whereHas('purchase', function ($q) {
+                            $q->where(function ($sub) {
+                                $sub->whereNull('is_transfer')->orWhere('is_transfer', 0);
+                            });
+                        })
                         ->where('branch_id', $userBranchId)
                         ->where('product_id', $product->id)
                         ->sum('main_qty');
-                    $pur_stock_sub = PurchaseItem::with('purchase')
+                    $pur_stock_sub = PurchaseItem::whereHas('purchase', function ($q) {
+                            $q->where(function ($sub) {
+                                $sub->whereNull('is_transfer')->orWhere('is_transfer', 0);
+                            });
+                        })
                         ->where('branch_id', $userBranchId)
                         ->where('product_id', $product->id)
                         ->sum('sub_qty');
