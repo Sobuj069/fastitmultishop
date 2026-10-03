@@ -2736,13 +2736,22 @@ class InvoiceController extends Controller
         $invoice_item->actual_main = $mainQty;
         $invoice_item->actual_sub = $subQty ?? 0;
 
-        $lineSubtotal = ((float)$rateVal * (float)$mainQty) - (float)$discountVal;
+        $conversion_val = ($find_unit_id && $find_unit_id->unit && $find_unit_id->unit->related_value) ? (float)$find_unit_id->unit->related_value : 1;
+        if ($conversion_val <= 0) $conversion_val = 1;
+
+        if ($find_unit_id && $find_unit_id->unit && $find_unit_id->unit->related_unit != null) {
+            $calcQty = (float)$mainQty + ((float)($subQty ?? 0) / $conversion_val);
+        } else {
+            $calcQty = (float)$mainQty;
+        }
+
+        $lineSubtotal = ((float)$rateVal * $calcQty) - (float)$discountVal;
         $invoice_item->subtotal = $lineSubtotal;
         $invoice_item->actual_total = $lineSubtotal;
         $invoice_item->inv_subtotal = $lineSubtotal;
 
         if ($find_unit_id && $find_unit_id->is_service == 0) {
-            $main = $mainQty * ($find_unit_id->unit && $find_unit_id->unit->related_value ? (float)$find_unit_id->unit->related_value : 1);
+            $main = $mainQty * $conversion_val;
             $sub = (float)($subQty ?? 0);
             $saleQty = $main + $sub;
 

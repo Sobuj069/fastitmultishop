@@ -6120,7 +6120,7 @@
                 // Extract numeric stock value for checking
                 let stockText = data.stock_qty;
                 let has_sub_unit = (data.product.unit && data.product.unit.related_unit != null);
-                let related_by = (data.product.unit && data.product.unit.related_value) ? data.product.unit.related_value : 1;
+                let related_by = (data.product.unit && data.product.unit.related_value) ? (parseFloat(data.product.unit.related_value) || 1) : 1;
                 let stockQty = parseStockQty(stockText, has_sub_unit, related_by);
 
                 // Get variation stock if applicable
@@ -6133,37 +6133,64 @@
                 }
 
                 // ===== Existing product quantity increase =====
-                let qtyInput = existingRow.find(".quantity-input"); // visible input box
+                let qtyInput = existingRow.find(".quantity-input"); // visible or hidden input box
                 let mainQtyHidden = existingRow.find(".main_qty"); // hidden main_qty
                 let subQtyHidden = existingRow.find(".sub_qty"); // hidden sub_qty
+                let mainQtyInput = existingRow.find(".main_qty_input");
+                let subQtyInput = existingRow.find(".sub_qty_input");
 
-                let currentQty = parseFloat(mainQtyHidden.val()) || 1;
-                let newQty = currentQty + 1;
+                if (has_sub_unit) {
+                    let currentMain = parseFloat(mainQtyHidden.val()) || 0;
+                    let currentSub = parseFloat(subQtyHidden.val()) || 0;
+                    let newMain = currentMain + 1;
+                    let newTotalSub = (newMain * related_by) + currentSub;
+                    let maxAvailable = (varStock !== null) ? varStock * related_by : stockQty * related_by;
 
-                // stock check
-                let maxAvailable = (varStock !== null) ? varStock : stockQty;
-                if (data.product.is_service == 0 && newQty > maxAvailable) {
-                    iziToast.error({
-                        title: "{{ __('Out of Stock!') }}",
-                        message: "{{ __('Available: ') }}" + maxAvailable,
-                        position: "topRight",
-                    });
+                    if (data.product.is_service == 0 && newTotalSub > maxAvailable) {
+                        iziToast.error({
+                            title: "{{ __('Out of Stock!') }}",
+                            message: "{{ __('Available: ') }}" + (maxAvailable / related_by).toFixed(3),
+                            position: "topRight",
+                        });
 
-                    // Show field validation error on stock label
-                    qtyInput.css('border', '2px solid red');
-                    existingRow.find('.stock-info-label').removeClass('text-muted').addClass('text-danger').css('font-weight', '600')
-                        .html('⚠ Out of Stock! Available: ' + maxAvailable);
-                    return false;
+                        mainQtyInput.css('border', '2px solid red');
+                        existingRow.find('.stock-info-label').removeClass('text-muted').addClass('text-danger').css('font-weight', '600')
+                            .html('⚠ Out of Stock! Available: ' + (maxAvailable / related_by).toFixed(3));
+                        return false;
+                    }
+
+                    mainQtyInput.val(newMain);
+                    mainQtyHidden.val(newMain);
+                    qtyInput.val(newMain + (currentSub / related_by));
+                } else {
+                    let currentQty = parseFloat(mainQtyHidden.val()) || 1;
+                    let newQty = currentQty + 1;
+
+                    // stock check
+                    let maxAvailable = (varStock !== null) ? varStock : stockQty;
+                    if (data.product.is_service == 0 && newQty > maxAvailable) {
+                        iziToast.error({
+                            title: "{{ __('Out of Stock!') }}",
+                            message: "{{ __('Available: ') }}" + maxAvailable,
+                            position: "topRight",
+                        });
+
+                        // Show field validation error on stock label
+                        qtyInput.css('border', '2px solid red');
+                        existingRow.find('.stock-info-label').removeClass('text-muted').addClass('text-danger').css('font-weight', '600')
+                            .html('⚠ Out of Stock! Available: ' + maxAvailable);
+                        return false;
+                    }
+
+                    // visible input update
+                    qtyInput.val(newQty);
+
+                    // hidden main_qty update
+                    mainQtyHidden.val(newQty);
+
+                    // sub_qty always 0
+                    subQtyHidden.val(0);
                 }
-
-                // visible input update
-                qtyInput.val(newQty);
-
-                // hidden main_qty update
-                mainQtyHidden.val(newQty);
-
-                // sub_qty always 0
-                subQtyHidden.val(0);
 
                 // ===== Subtotal Update =====
                 update_row_discount_and_subtotal(existingRow);
@@ -6181,7 +6208,7 @@
                 let has_sub_unit = (data.product.unit && data.product.unit.related_unit != null);
 
                 // conversion value (kg=1000gm / box=12pcs etc)
-                let related_by = (data.product.unit && data.product.unit.related_value) ? data.product.unit.related_value : 1;
+                let related_by = (data.product.unit && data.product.unit.related_value) ? (parseFloat(data.product.unit.related_value) || 1) : 1;
 
                 // parse stock quantity
                 let stockQty = parseStockQty(stockText, has_sub_unit, related_by);
@@ -6245,26 +6272,28 @@
                 let sub_qty = 0;
 
                 if (weight !== null && weight !== '') {
-                    let has_sub_unit = tr.find('.has_sub_unit').val();
-                    let related_by = parseInt(tr.find('.quantity-input').attr('data-related')) || 1000;
                     let gram = parseFloat(weight);
-
-                    if (gram < 10 && related_by == 1000) {
-                        gram = gram / 1000;
-                    }
-
-                    if (has_sub_unit === "true" && related_by > 0) {
-                        main_qty = gram / related_by;
-                        sub_qty = 0;
+                    if (has_sub_unit && related_by > 0) {
+                        main_qty = Math.floor(gram / related_by);
+                        sub_qty = Math.round(gram % related_by);
                     } else {
-                        main_qty = gram / related_by;
+                        main_qty = gram;
+                        sub_qty = 0;
+                    }
+                } else if (has_sub_unit) {
+                    let stock_sub_units = stockQty * related_by;
+                    if (stock_sub_units > 0 && stock_sub_units < related_by) {
+                        main_qty = 0;
+                        sub_qty = Math.round(stock_sub_units);
+                    } else {
+                        main_qty = 1;
                         sub_qty = 0;
                     }
                 }
 
-                tr.find('.main_qty').val(main_qty);
-                tr.find('.sub_qty').val(sub_qty);
-                tr.find('.quantity-input').val(main_qty);
+                tr.find('.main_qty, .main_qty_input').val(main_qty);
+                tr.find('.sub_qty, .sub_qty_input').val(sub_qty);
+                tr.find('.quantity-input').val(has_sub_unit ? (main_qty + (sub_qty / related_by)) : main_qty);
 
                 update_row_discount_and_subtotal(tr);
                 estimatedAmount();
@@ -6950,11 +6979,14 @@
 
         function domPrepend(data = null, index = null, variation_code = null, skipStockCheck = false) {
             var name = data.product.name;
-            var quantity_data = '';
             var variation_data = ``;
             let main_qty_val = 1; // Default to 1 for new products
             let sub_qty_val = 0;
             let quantity_readonly = data.product.imei == 1 ? 'readonly' : '';
+            let has_sub_unit = (data.product.unit && data.product.unit.related_unit != null);
+            let related_by = (data.product.unit && data.product.unit.related_value) ? (parseFloat(data.product.unit.related_value) || 1) : 1;
+            let main_unit_name = data.product.unit ? (data.product.unit.name || 'Unit') : 'pcs';
+            let sub_unit_name = (has_sub_unit && data.product.unit.related_unit) ? data.product.unit.related_unit : 'gm';
 
             // Format stock_qty for display
             let displayStock = '';
@@ -7018,55 +7050,123 @@
                 `;
             }
 
-            let initialSubtotal = calculate_sub_total(
-                1,
-                0,
-                data.product.selling_price || 0,
-                (data.product.unit && data.product.unit.related_value) ? data.product.unit.related_value : 1,
-                (data.product.unit && data.product.unit.related_unit != null) ? "true" : "false"
-            );
-
             if (data.product.is_service == 0) {
                 if (typeof weight !== "undefined" && weight !== null && weight !== "" && !isNaN(weight)) {
-                    let gram = parseInt(weight, 10); // Always comes in grams
-                    if (data.product.unit.related_unit != null) {
-                        // If there is a related unit (e.g., kg = 1000 gm)
-                        let related_by = parseInt(data.product.unit.related_value) || 1000;
-                        main_qty_val = (gram / related_by).toFixed(3); // convert to decimal
+                    let gram = parseFloat(weight);
+                    if (has_sub_unit && related_by > 0) {
+                        main_qty_val = Math.floor(gram / related_by);
+                        sub_qty_val = Math.round(gram % related_by);
                     } else {
-                        // Only main unit
                         main_qty_val = gram;
+                        sub_qty_val = 0;
                     }
-                }
-                if (!data.product.unit || data.product.unit.related_unit == null) {
-                    quantity_data =
-                        `
-                            <input type="text" class="has_sub_unit" hidden value="false">
-                            <label class="ml-2 mr-2" style="padding-top: 5px;">${(data.product.unit ? data.product.unit.name : 'pcs')}:</label>
-                            <input type="text" class="form-control quantity-input" value="${main_qty_val}" 
-                                placeholder="{{ __('e.g., 5 kg, 500 gm, 5.5') }}" 
-                                data-related="${(data.product.unit ? data.product.unit.related_value : 1) || 1}" 
-                                data-stock="${displayStock}" ${quantity_readonly}>
-                            <input type="hidden" class="main_qty" name="main_qty[]" value="1">
-                            <input type="hidden" class="sub_qty" name="sub_qty[]" value="0">`;
+                } else if (has_sub_unit) {
+                    let stock_qty_parsed = parseStockQty(displayStock, true, related_by);
+                    let stock_sub_units = stock_qty_parsed * related_by;
+                    if (stock_sub_units > 0 && stock_sub_units < related_by) {
+                        main_qty_val = 0;
+                        sub_qty_val = Math.round(stock_sub_units);
+                    } else {
+                        main_qty_val = 1;
+                        sub_qty_val = 0;
+                    }
                 } else {
-                    quantity_data =
-                        `<input type="text" class="has_sub_unit" hidden value="true">
-                                <input type="text" class="conversion" hidden value="${data.product.unit.related_value}">
-                                <label class="mr-4 ml-1" style="padding-top: 5px;">${data.product.unit.name}:</label>
-                                <input type="text" class="form-control quantity-input" value="${main_qty_val}" 
-                                    placeholder="{{ __('e.g., 5 kg, 500 gm, 5.5') }}" 
-                                    data-related="${data.product.unit.related_value}" 
-                                    data-stock="${displayStock}" ${quantity_readonly}>
-                                <input type="hidden" class="main_qty" name="main_qty[]" value="1">
-                                <input type="hidden" class="sub_qty" name="sub_qty[]" value="0">`;
+                    main_qty_val = 1;
+                    sub_qty_val = 0;
                 }
             } else {
-                quantity_data =
-                    `
-                        <label class="ml-2 mr-2" style="padding-top: 5px;">pcs:</label>
-                        <input type="number" value="1" class="form-control col main_qty" 
-                            name="main_qty[]" onkeydown="return event.keyCode !== 190" min="0">`;
+                main_qty_val = 1;
+                sub_qty_val = 0;
+            }
+
+            let initialSubtotal = calculate_sub_total(
+                main_qty_val,
+                sub_qty_val,
+                data.product.selling_price || 0,
+                related_by,
+                has_sub_unit ? "true" : "false"
+            );
+
+            let quantity_column_html = '';
+            if (data.product.is_service == 1) {
+                quantity_column_html = `
+                    <input type="hidden" class="has_sub_unit" value="false">
+                    <input type="hidden" class="conversion" value="1">
+                    <div class="input-group flex-nowrap" style="width: 100%;">
+                        <div class="input-group-prepend">
+                            <button type="button" class="btn btn-sm qty-minus-btn px-2" style="border-radius: 4px 0 0 4px; height: 31px; display: flex; align-items: center; justify-content: center; z-index: 3;">
+                                <i class="fa fa-minus" style="font-size: 8px;"></i>
+                            </button>
+                        </div>
+                        <input type="text" style="width: 100%; height: 31px; text-align: center;"
+                            class="form-control quantity-input px-1" 
+                            data-related="1" 
+                            data-stock="${displayStock}"
+                            value="${main_qty_val}" placeholder="Qty" />
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-sm qty-plus-btn px-2" style="border-radius: 0; height: 31px; display: flex; align-items: center; justify-content: center; z-index: 3;">
+                                <i class="fa fa-plus" style="font-size: 8px;"></i>
+                            </button>
+                            <span class="input-group-text p-1" style="font-size: 10px; border-radius: 0 4px 4px 0; display: flex; align-items: center; justify-content: center; height: 31px;">pcs</span>
+                        </div>
+                    </div>
+                    <input type="hidden" class="main_qty" name="main_qty[]" value="${main_qty_val}">
+                    <input type="hidden" class="sub_qty" name="sub_qty[]" value="0">
+                `;
+            } else if (has_sub_unit) {
+                let combinedDecimal = (parseFloat(main_qty_val) || 0) + ((parseFloat(sub_qty_val) || 0) / related_by);
+                quantity_column_html = `
+                    <input type="hidden" class="has_sub_unit" value="true">
+                    <input type="hidden" class="conversion" value="${related_by}">
+                    <input type="hidden" class="quantity-input" data-related="${related_by}" data-stock="${displayStock}" value="${combinedDecimal}">
+                    <div class="d-flex align-items-center" style="gap: 4px; width: 100%;">
+                        <div class="input-group input-group-sm flex-nowrap" style="flex: 1; min-width: 0;" title="${main_unit_name}">
+                            <input type="number" step="any" min="0" 
+                                class="form-control form-control-sm px-1 text-center main_qty_input" 
+                                value="${main_qty_val}" placeholder="0" style="height: 31px; font-weight: 600;" ${quantity_readonly}>
+                            <div class="input-group-append">
+                                <span class="input-group-text px-1 text-muted font-weight-bold" style="font-size: 10px; height: 31px;">${main_unit_name}</span>
+                            </div>
+                        </div>
+                        <div class="input-group input-group-sm flex-nowrap" style="flex: 1; min-width: 0;" title="${sub_unit_name}">
+                            <input type="number" step="any" min="0" max="${related_by - 1}" 
+                                class="form-control form-control-sm px-1 text-center sub_qty_input" 
+                                value="${sub_qty_val}" placeholder="0" style="height: 31px; font-weight: 600;" ${quantity_readonly}>
+                            <div class="input-group-append">
+                                <span class="input-group-text px-1 text-muted font-weight-bold" style="font-size: 10px; height: 31px;">${sub_unit_name}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="stock-info-label text-muted d-block mt-1" style="font-size:10px;">📦 Stock: ${displayStock || '0'}</small>
+                    <input type="hidden" class="main_qty" name="main_qty[]" value="${main_qty_val}">
+                    <input type="hidden" class="sub_qty" name="sub_qty[]" value="${sub_qty_val}">
+                `;
+            } else {
+                quantity_column_html = `
+                    <input type="hidden" class="has_sub_unit" value="false">
+                    <input type="hidden" class="conversion" value="1">
+                    <div class="input-group flex-nowrap" style="width: 100%;">
+                        <div class="input-group-prepend">
+                            <button type="button" class="btn btn-sm qty-minus-btn px-2" ${data.product.imei == 1 ? 'disabled' : ''} style="border-radius: 4px 0 0 4px; height: 31px; display: flex; align-items: center; justify-content: center; z-index: 3;">
+                                <i class="fa fa-minus" style="font-size: 8px;"></i>
+                            </button>
+                        </div>
+                        <input type="text" style="width: 100%; height: 31px; text-align: center;"
+                            class="form-control quantity-input px-1" 
+                            data-related="1" 
+                            data-stock="${displayStock}" ${quantity_readonly}
+                            value="${main_qty_val}" placeholder="Qty" />
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-sm qty-plus-btn px-2" ${data.product.imei == 1 ? 'disabled' : ''} style="border-radius: 0; height: 31px; display: flex; align-items: center; justify-content: center; z-index: 3;">
+                                <i class="fa fa-plus" style="font-size: 8px;"></i>
+                            </button>
+                            <span class="input-group-text p-1" style="font-size: 10px; border-radius: 0 4px 4px 0; display: flex; align-items: center; justify-content: center; height: 31px;">${main_unit_name}</span>
+                        </div>
+                    </div>
+                    <small class="stock-info-label text-muted d-block mt-1" style="font-size:10px;">📦 Stock: ${displayStock || '0'}</small>
+                    <input type="hidden" class="main_qty" name="main_qty[]" value="${main_qty_val}">
+                    <input type="hidden" class="sub_qty" name="sub_qty[]" value="0">
+                `;
             }
 
             let dom = `
@@ -7106,28 +7206,7 @@
                             </td>
                         @endif
                         <td style="width: 18%; min-width: 160px;">
-                            <input type="hidden" class="has_sub_unit" value="${(data.product.unit && data.product.unit.related_unit != null) ? 'true' : 'false'}">
-                            <div class="input-group flex-nowrap" style="width: 100%;">
-                                <div class="input-group-prepend">
-                                    <button type="button" class="btn btn-sm qty-minus-btn px-2" ${data.product.imei == 1 ? 'disabled' : ''} style="border-radius: 4px 0 0 4px; height: 31px; display: flex; align-items: center; justify-content: center; z-index: 3;">
-                                        <i class="fa fa-minus" style="font-size: 8px;"></i>
-                                    </button>
-                                </div>
-                                <input type="text" style="width: 100%; height: 31px; text-align: center;"
-                                    class="form-control quantity-input px-1" 
-                                    data-related="${(data.product.unit && data.product.unit.related_value) ? data.product.unit.related_value : 1}" 
-                                    data-stock="${displayStock}" ${quantity_readonly}
-                                    value="${main_qty_val}" placeholder="Qty" />
-                                <div class="input-group-append">
-                                    <button type="button" class="btn btn-sm qty-plus-btn px-2" ${data.product.imei == 1 ? 'disabled' : ''} style="border-radius: 0; height: 31px; display: flex; align-items: center; justify-content: center; z-index: 3;">
-                                        <i class="fa fa-plus" style="font-size: 8px;"></i>
-                                    </button>
-                                    <span class="input-group-text p-1" style="font-size: 10px; border-radius: 0 4px 4px 0; display: flex; align-items: center; justify-content: center; height: 31px;">${(data.product.unit ? data.product.unit.name : 'pcs')}</span>
-                                </div>
-                            </div>
-                            <small class="stock-info-label text-muted d-block mt-1" style="font-size:10px; ${data.product.is_service == 1 ? 'display: none !important;' : ''}">📦 Stock: ${displayStock || '0'}</small>
-                            <input type="hidden" class="main_qty" name="main_qty[]" value="${Math.floor(main_qty_val)}">
-                            <input type="hidden" class="sub_qty" name="sub_qty[]" value="${sub_qty_val}">
+                            ${quantity_column_html}
                         </td>
                         <td style="width: 13%; min-width: 110px;">
                             <div class="input-group input-group-sm d-flex flex-nowrap align-items-center" style="width: 100%;">
@@ -7158,83 +7237,88 @@
             $("#tbody").prepend(dom);
         }
 
-        function parseStockText(stockText, has_sub_unit, related_by = 1) {
+        // ========================================
+        // ✅ Dual Input (Main Unit + Sub Unit e.g. KG + GM) Event Handlers
+        // ========================================
+        $(document).on('keyup change input', '.main_qty_input, .sub_qty_input', function(e) {
+            let row = $(this).closest('tr');
+            let isService = row.attr('data-is-service') === '1' || row.data('is-service') == 1;
+            let mainInput = row.find('.main_qty_input');
+            let subInput = row.find('.sub_qty_input');
+            let mainVal = parseFloat(mainInput.val()) || 0;
+            let subVal = parseFloat(subInput.val()) || 0;
+            if (mainVal < 0) { mainVal = 0; mainInput.val(0); }
+            if (subVal < 0) { subVal = 0; subInput.val(0); }
 
-            if (!stockText) return 0;
+            let related_by = parseFloat(row.find('.quantity-input').attr('data-related')) || parseFloat(row.find('.conversion').val()) || 1000;
 
-            // PC / Piece product
-            if (!has_sub_unit || has_sub_unit === "false") {
-                return parseFloat(stockText) || 0;
+            if (e.type === 'change' && subVal >= related_by && related_by > 0) {
+                let extraMain = Math.floor(subVal / related_by);
+                mainVal += extraMain;
+                subVal = Math.round(subVal % related_by);
+                mainInput.val(mainVal);
+                subInput.val(subVal);
             }
 
-            // API object response
-            if (typeof stockText === 'object' && stockText.available_stock !== undefined) {
-                return parseFloat(stockText.available_stock) || 0;
+            let totalRequestedSub = (mainVal * related_by) + subVal;
+
+            if (!isService) {
+                let variation_select = row.find('select[name="variation_id[]"]');
+                let stock_sub = 0;
+
+                if (env_sc === 'yes' && variation_select.length > 0 && variation_select.val()) {
+                    let selectedOption = variation_select.find('option:selected');
+                    let varStock = parseFloat(selectedOption.attr('stock')) || 0;
+                    stock_sub = varStock * related_by;
+                } else {
+                    let stockText = row.find('.quantity-input').attr('data-stock');
+                    let stock_qty = parseStockQty(stockText, true, related_by);
+                    stock_sub = stock_qty * related_by;
+                }
+
+                if (totalRequestedSub > stock_sub && stock_sub >= 0) {
+                    let maxMain = Math.floor(stock_sub / related_by);
+                    let maxSub = Math.round(stock_sub % related_by);
+                    mainInput.val(maxMain);
+                    subInput.val(maxSub);
+                    mainVal = maxMain;
+                    subVal = maxSub;
+                    totalRequestedSub = stock_sub;
+
+                    mainInput.css('border', '2px solid red');
+                    subInput.css('border', '2px solid red');
+                    row.find('.stock-info-label').removeClass('text-muted').addClass('text-danger').css('font-weight', '600')
+                        .html('⚠ Not enough! Stock: ' + (stock_sub / related_by).toFixed(3));
+
+                    if (typeof iziToast !== 'undefined') {
+                        iziToast.error({
+                            title: "{{ __('Not Enough Stock!') }}",
+                            message: "{{ __('Available: ') }}" + (stock_sub / related_by).toFixed(3),
+                            position: "topRight",
+                        });
+                    }
+                } else {
+                    mainInput.css('border', '');
+                    subInput.css('border', '');
+                    row.find('.stock-info-label').removeClass('text-danger').addClass('text-muted').css('font-weight', 'normal')
+                        .html('📦 Stock: ' + (row.find('.quantity-input').attr('data-stock') || '0'));
+                }
             }
 
-            // If string like "2 unit 5 sub"
-            if (typeof stockText === 'string') {
+            row.find('.main_qty').val(mainVal);
+            row.find('.sub_qty').val(subVal);
+            let combinedDecimal = mainVal + (subVal / related_by);
+            row.find('.quantity-input').val(combinedDecimal);
 
-                let numbers = stockText.match(/\d+(\.\d+)?/g);
+            update_row_discount_and_subtotal(row);
+            estimatedAmount();
+        });
 
-                let main = numbers && numbers[0] ? parseFloat(numbers[0]) : 0;
-                let sub = numbers && numbers[1] ? parseFloat(numbers[1]) : 0;
-
-                return main + (sub / related_by);
-            }
-
-            return parseFloat(stockText) || 0;
-        }
-
-        // $(document).on('keyup change', '.quantity-input', function(e) {
-        //     let row = $(this).closest('tr');
-
-        //     let input = $(this).val();
-        //     let related_by = parseInt($(this).attr('data-related')) || 1;
-        //     let has_sub_unit = row.find('.has_sub_unit').val();
-        //     let stockText = $(this).attr('data-stock');
-
-        //     // parse stock
-        //     let stock_qty = parseStockText(stockText, has_sub_unit, related_by);
-        //     let stock = stock_qty * related_by;
-
-        //     // parse input quantity
-        //     let quantities = parseQuantityInput(input, related_by);
-        //     let total_quantity = to_sub_unit(
-        //         quantities.main_qty,
-        //         quantities.sub_qty,
-        //         related_by,
-        //         has_sub_unit
-        //     );
-
-        //     if (stock < total_quantity) {
-        //         iziToast.warning({
-        //             title: "Not Enough Stock.",
-        //             position: "topRight",
-        //         });
-
-        //         // Set input to max available stock
-        //         let converted = convert_to_main_and_sub(stock, has_sub_unit, related_by);
-        //         quantities.main_qty = converted.main_qty;
-        //         quantities.sub_qty = converted.sub_qty;
-
-        //         $(this).val(
-        //             quantities.main_qty +
-        //             (quantities.sub_qty > 0 ?
-        //                 '.' + quantities.sub_qty.toString().padStart(3, '0').substring(0, 3) :
-        //                 '')
-        //         );
-        //     }
-
-        //     // Update hidden inputs
-        //     row.find('.main_qty').val(quantities.main_qty);
-        //     row.find('.sub_qty').val(quantities.sub_qty);
-
-        //     // Call handle_change to recalc subtotal
-        //     handle_change($(this));
-        // });
         $(document).on('keyup change input', '.quantity-input', function(e) {
             let row = $(this).closest('tr');
+            if (row.find('.main_qty_input').length > 0) {
+                return;
+            }
             let isService = row.attr('data-is-service') === '1' || row.data('is-service') == 1;
 
             if (isService) {
@@ -7310,7 +7394,7 @@
             } else {
                 // fallback to product stock
                 let stockText = $(this).attr('data-stock');
-                let stock_qty = parseStockText(stockText, has_sub_unit, related_by);
+                let stock_qty = parseStockQty(stockText, has_sub_unit, related_by);
                 stock = stock_qty * related_by;
             }
 
@@ -7322,8 +7406,6 @@
                 related_by,
                 has_sub_unit
             );
-
-
 
             if (stock < total_quantity) {
                 // Convert available stock to display format
@@ -7376,6 +7458,8 @@
             let variationStock = parseFloat(selectedOption.attr('stock'));
             let stockLabel = row.find('.stock-info-label');
             let qtyInput = row.find('.quantity-input');
+            let has_sub_unit = row.find('.has_sub_unit').val() === 'true';
+            let related_by = parseFloat(qtyInput.attr('data-related')) || 1;
 
             if (isNaN(variationStock)) {
                 return;
@@ -7388,9 +7472,10 @@
                 stockLabel.removeClass('text-muted').addClass('text-danger').css('font-weight', '600')
                     .html('⚠ Stock Out! Available: 0');
                 qtyInput.val(0).css('border', '2px solid red');
-                row.find('.main_qty').val(0);
-                row.find('.sub_qty').val(0);
-                handle_change(qtyInput);
+                row.find('.main_qty, .main_qty_input').val(0);
+                row.find('.sub_qty, .sub_qty_input').val(0);
+                update_row_discount_and_subtotal(row);
+                estimatedAmount();
                 iziToast.error({
                     title: "{{ __('Stock Out!') }}",
                     message: "{{ __('Selected variation is out of stock.') }}",
@@ -7401,8 +7486,9 @@
                 qtyInput.attr('data-stock', variationStock);
                 stockLabel.removeClass('text-danger').addClass('text-muted').css('font-weight', 'normal')
                     .html('📦 Stock: ' + variationStock);
-                // Trigger quantity input re-validation if not 0
-                if (parseFloat(qtyInput.val()) > 0) {
+                if (has_sub_unit && row.find('.main_qty_input').length > 0) {
+                    row.find('.main_qty_input').trigger('change');
+                } else if (parseFloat(qtyInput.val()) > 0) {
                     qtyInput.trigger('input');
                 }
             }
@@ -7425,8 +7511,13 @@
                 let isService = row.attr('data-is-service') === '1' || row.data('is-service') == 1;
                 if (isService) return;
 
-                let name = row.find('.name').val() || 'Product';
+                let name = row.find('.name').val() || row.find('span.font-weight-bold').text().trim() || 'Product';
                 let varSelect = row.find('select[name="variation_id[]"]');
+                let has_sub_unit = row.find('.has_sub_unit').val() === 'true';
+                let related_by = parseFloat(row.find('.quantity-input').attr('data-related')) || 1;
+                let mainQty = parseFloat(row.find('.main_qty').val()) || 0;
+                let subQty = parseFloat(row.find('.sub_qty').val()) || 0;
+                let totalReqSub = (mainQty * related_by) + subQty;
                 
                 if (env_sc === 'yes' && varSelect.length > 0) {
                     let varId = varSelect.val();
@@ -7440,32 +7531,27 @@
                     }
                     
                     let varStock = parseFloat(selectedOpt.attr('stock')) || 0;
-                    let mainQty = parseFloat(row.find('.main_qty').val()) || 0;
-                    let subQty = parseFloat(row.find('.sub_qty').val()) || 0;
-                    let reqQty = mainQty + subQty;
+                    let varStockSub = has_sub_unit ? (varStock * related_by) : varStock;
+                    let checkReq = has_sub_unit ? totalReqSub : (mainQty + subQty);
                     
-                    if (varStock <= 0 || reqQty > varStock) {
+                    if (varStock <= 0 || checkReq > varStockSub) {
                         hasError = true;
                         errorMsg = "{{ __('Stock Out Error: Selected variation for ') }}" + name + " {{ __('is out of stock!') }} (" + "{{ __('Available: ') }}" + varStock + ")";
                         varSelect.css('border', '2px solid red');
-                        row.find('.quantity-input').css('border', '2px solid red').focus();
+                        row.find('.quantity-input, .main_qty_input').css('border', '2px solid red').focus();
                         return false;
                     }
                 } else {
                     let qtyInput = row.find('.quantity-input');
-                    let has_sub_unit = row.find('.has_sub_unit').val() === 'true' || parseFloat(qtyInput.attr('data-related')) > 1;
-                    let related_by = parseFloat(qtyInput.attr('data-related')) || 1;
                     let stockText = qtyInput.attr('data-stock');
                     
                     let stockQtyInMain = parseStockQty(stockText, has_sub_unit, related_by);
-                    let mainQty = parseFloat(row.find('.main_qty').val()) || 0;
-                    let subQty = parseFloat(row.find('.sub_qty').val()) || 0;
-                    let reqQtyInMain = (has_sub_unit && related_by > 0) ? (mainQty + (subQty / related_by)) : (mainQty + subQty);
+                    let stockSub = stockQtyInMain * related_by;
                     
-                    if (stockQtyInMain <= 0 || reqQtyInMain > (stockQtyInMain + 0.0001)) {
+                    if (stockQtyInMain <= 0 || totalReqSub > (stockSub + 0.001)) {
                         hasError = true;
                         errorMsg = "{{ __('Stock Out Error: Product ') }}" + name + " {{ __('is out of stock!') }} (" + "{{ __('Available: ') }}" + (stockText || stockQtyInMain) + ")";
-                        qtyInput.css('border', '2px solid red').focus();
+                        row.find('.quantity-input, .main_qty_input').css('border', '2px solid red').focus();
                         return false;
                     }
                 }
@@ -8534,8 +8620,8 @@
                         let itemData = savedRowItems[idx] || {};
                         domPrepend(item, idx, itemData.variation_id || item.variation_code);
                         let row = $("#tbody tr:first");
-                        if (itemData.main_qty !== undefined && itemData.main_qty !== null) row.find(".main_qty").val(itemData.main_qty);
-                        if (itemData.sub_qty !== undefined && itemData.sub_qty !== null) row.find(".sub_qty").val(itemData.sub_qty);
+                        if (itemData.main_qty !== undefined && itemData.main_qty !== null) row.find(".main_qty, .main_qty_input").val(itemData.main_qty);
+                        if (itemData.sub_qty !== undefined && itemData.sub_qty !== null) row.find(".sub_qty, .sub_qty_input").val(itemData.sub_qty);
                         if (itemData.quantity_input !== undefined && itemData.quantity_input !== null) row.find(".quantity-input").val(itemData.quantity_input);
                         if (itemData.rate !== undefined && itemData.rate !== null) row.find(".rate").val(itemData.rate);
                         if (itemData.product_discount_val !== undefined && itemData.product_discount_val !== null) row.find(".product_discount_val").val(itemData.product_discount_val);
@@ -8599,8 +8685,8 @@
                 let itemData = (hold.items_data && hold.items_data[idx]) ? hold.items_data[idx] : {};
                 domPrepend(item, idx, itemData.variation_id || item.variation_code);
                 let row = $("#tbody tr:first");
-                if (itemData.main_qty !== undefined && itemData.main_qty !== null) row.find(".main_qty").val(itemData.main_qty);
-                if (itemData.sub_qty !== undefined && itemData.sub_qty !== null) row.find(".sub_qty").val(itemData.sub_qty);
+                if (itemData.main_qty !== undefined && itemData.main_qty !== null) row.find(".main_qty, .main_qty_input").val(itemData.main_qty);
+                if (itemData.sub_qty !== undefined && itemData.sub_qty !== null) row.find(".sub_qty, .sub_qty_input").val(itemData.sub_qty);
                 if (itemData.quantity_input !== undefined && itemData.quantity_input !== null) row.find(".quantity-input").val(itemData.quantity_input);
                 if (itemData.rate !== undefined && itemData.rate !== null) row.find(".rate").val(itemData.rate);
                 if (itemData.product_discount_val !== undefined && itemData.product_discount_val !== null) row.find(".product_discount_val").val(itemData.product_discount_val);
@@ -9520,13 +9606,13 @@ $(document).on('input change', '.inst_last_due_date', function() {
                 let isService = row.attr('data-is-service') === '1' || row.data('is-service') == 1;
                 if (isService) return; // Skip service products
 
-                let name = row.find('span.font-weight-bold').text().trim();
+                let name = row.find('span.font-weight-bold').text().trim() || row.find('.name').val() || 'Product';
                 let has_sub_unit = row.find('.has_sub_unit').val();
                 let qtyInputEl = row.find('.quantity-input');
-                if (qtyInputEl.length === 0) return;
-
-                let input = qtyInputEl.val();
-                let related_by = parseInt(qtyInputEl.attr('data-related')) || 1;
+                let related_by = (qtyInputEl.length > 0 && parseFloat(qtyInputEl.attr('data-related'))) ? parseFloat(qtyInputEl.attr('data-related')) : 1;
+                let mainQty = parseFloat(row.find('.main_qty').val()) || 0;
+                let subQty = parseFloat(row.find('.sub_qty').val()) || 0;
+                let totalReqSub = (has_sub_unit === 'true') ? ((mainQty * related_by) + subQty) : (mainQty + subQty);
 
                 // Get stock from selected variation if exists
                 let variation_select = row.find('select[name="variation_id[]"]');
@@ -9536,27 +9622,18 @@ $(document).on('input change', '.inst_last_due_date', function() {
                 if (env_sc === 'yes' && variation_select.length > 0 && variation_select.val()) {
                     let selectedOption = variation_select.find('option:selected');
                     let variationStock = parseFloat(selectedOption.attr('stock')) || 0;
-                    stock = has_sub_unit === "true" ? variationStock * related_by : variationStock;
+                    stock = (has_sub_unit === 'true') ? variationStock * related_by : variationStock;
                     displayStock = variationStock + " (Variation)";
                 } else {
                     // fallback to product stock
                     let stockText = qtyInputEl.attr('data-stock');
                     displayStock = stockText || '0';
-                    let stock_qty = parseStockText(stockText, has_sub_unit, related_by);
-                    stock = stock_qty * related_by;
+                    let stock_qty = parseStockQty(stockText, has_sub_unit === 'true', related_by);
+                    stock = (has_sub_unit === 'true') ? stock_qty * related_by : stock_qty;
                 }
 
-                // parse input quantity
-                let quantities = parseQuantityInput(input, related_by);
-                let total_quantity = to_sub_unit(
-                    quantities.main_qty,
-                    quantities.sub_qty,
-                    related_by,
-                    has_sub_unit
-                );
-
                 // ✅ Block checkout if piece product has decimals
-                if (has_sub_unit !== 'true' && input.toString().includes('.')) {
+                if (has_sub_unit !== 'true' && qtyInputEl.val() && qtyInputEl.val().toString().includes('.')) {
                     if (typeof window.toastMagic !== 'undefined') {
                         window.toastMagic.error(name + ": " + "{{ __('Only whole numbers allowed!') }}");
                     } else if (typeof iziToast !== 'undefined') {
@@ -9575,7 +9652,7 @@ $(document).on('input change', '.inst_last_due_date', function() {
                 }
 
                 // Block checkout if quantity is 0 or less
-                if (total_quantity <= 0) {
+                if (totalReqSub <= 0) {
                     if (typeof iziToast !== 'undefined') {
                         iziToast.error({
                             title: "{{ __('Invalid Quantity!') }}",
@@ -9585,13 +9662,13 @@ $(document).on('input change', '.inst_last_due_date', function() {
                     } else {
                         alert(name + ": " + "{{ __('Quantity cannot be zero or empty!') }}");
                     }
-                    qtyInputEl.css('border', '2px solid red');
+                    row.find('.quantity-input, .main_qty_input, .sub_qty_input').css('border', '2px solid red');
                     row.find('.stock-info-label').removeClass('text-muted').addClass('text-danger').css('font-weight', '600')
                         .html('⚠ Quantity cannot be zero!');
                     hasError = true;
                 }
 
-                if (stock < total_quantity) {
+                if (stock < totalReqSub) {
                     let availDisplay = (has_sub_unit === 'true') ? (stock / related_by).toFixed(3) : stock;
                     
                     if (typeof window.toastMagic !== 'undefined') {
@@ -9607,7 +9684,7 @@ $(document).on('input change', '.inst_last_due_date', function() {
                     }
                     
                     // Highlight the input box with red border
-                    qtyInputEl.css('border', '2px solid red');
+                    row.find('.quantity-input, .main_qty_input, .sub_qty_input').css('border', '2px solid red');
                     row.find('.stock-info-label').removeClass('text-muted').addClass('text-danger').css('font-weight', '600')
                         .html('⚠ Not enough! Stock: ' + displayStock);
 
