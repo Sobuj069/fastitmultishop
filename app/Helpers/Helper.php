@@ -73,7 +73,6 @@ function get_route_list()
     unset($routeList['register']);
     unset($routeList['password']);
     unset($routeList['verification']);
-    unset($routeList['password']);
     unset($routeList['user-profile-information']);
     unset($routeList['user-password']);
     unset($routeList['two-factor']);
@@ -85,8 +84,8 @@ function get_route_list()
     unset($routeList['get']);
     unset($routeList['expense-category']);
     unset($routeList['user-role']);
-    unset($routeList['branch']);
-    unset($routeList['switch']);
+    unset($routeList['debugbar']);
+    unset($routeList['default']);
     //sort ascending
     ksort($routeList);
 
@@ -139,16 +138,13 @@ function check_permission($routeName)
         'login', 'logout', 'register', 'password', 'verification',
         'user-profile-information', 'user-password', 'two-factor',
         'profile', 'sanctum', 'livewire', 'ignition', 'store', 'get',
-        'expense-category', 'user-role', 'otp', 'branch', 'switch',
+        'expense-category', 'user-role', 'otp',
         'customer_quick_history', 'product-search', 'search-product-id',
         'sc-product-search', 'sc-search-product-id', 'sc-pos-product-id',
         'posProducts', 'barcode'
     ];
 
     if (in_array($module, $publicModules)) {
-        if ($module === 'switch' && !is_branch_switch_enabled()) {
-            return false;
-        }
         return true;
     }
 
