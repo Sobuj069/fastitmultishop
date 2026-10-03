@@ -42,39 +42,76 @@
             <div class="card m-b-30 card_style">
                 <div class="card-body">
                     <form action="{{ route('transfer.index') }}" method="GET">
-                        @php
-                            $products = App\Models\Product::get();
-                        @endphp
                         <div class="row h-hide">
-                            <div class="col-md-3 col-12 mt-3">
-                                <input type="date" class="form-control" name="startDate" value="{{ $startDate }}" />
+                            <div class="col-md-3 col-12 mt-2">
+                                <label class="form-label font-weight-bold mb-1">{{ __('Start Date') }}</label>
+                                <input type="date" class="form-control" name="startDate" value="{{ $startDate ?? '' }}" />
                             </div>
-                            <div class="col-md-3 col-12 mt-3">
-                                <input type="date" class="form-control" name="endDate" value="{{ $endDate }}" />
+                            <div class="col-md-3 col-12 mt-2">
+                                <label class="form-label font-weight-bold mb-1">{{ __('End Date') }}</label>
+                                <input type="date" class="form-control" name="endDate" value="{{ $endDate ?? '' }}" />
                             </div>
-                            <div class="col-md-3 col-12 mt-3">
+                            <div class="col-md-3 col-12 mt-2">
+                                <label class="form-label font-weight-bold mb-1">{{ __('Search') }}</label>
                                 <input type="text" placeholder="{{ __('Scan Barcode / Transfer No') }}" name="barcode"
                                     value="{{ $barcode ?? ($invoice_no ?? '') }}" class="form-control barcode-filter-input" data-barcode-input>
                             </div>
-                            <div class="col-md-3 col-12 mt-3">
-                                <select name="product_id" id="" class="select2">
+                            <div class="col-md-3 col-12 mt-2">
+                                <label class="form-label font-weight-bold mb-1">{{ __('Product') }}</label>
+                                <select name="product_id" id="product_id" class="select2 form-control">
                                     <option value="">{{ __('Select Product') }}</option>
                                     @foreach ($products as $item)
-                                        <option value="{{ $item->id }}"{{ $product_id == $item->id ? 'selected' : '' }}>
-                                            {{ $item->name }}</option>
+                                        <option value="{{ $item->id }}" {{ ($product_id ?? '') == $item->id ? 'selected' : '' }}>
+                                            {{ $item->name }} @if(!empty($item->barcode)) ({{ $item->barcode }}) @endif
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
                         </div>
-                        <div class="row mt-3 h-hide d-flex justify-content-between">
-                            <div class="col-md-12">
-                                <button type="submit" class="btn add_list_btn">{{ __('Filter') }}</button>
-                                <a href="{{ route('transfer.index') }}" class="btn add_list_btn_reset">{{ __('Reset') }}</a>
-                                <a href="" class="btn add_list_btn float-right" onclick="window.print()">{{ __('Print') }}</a>
+                        <div class="row h-hide">
+                            <div class="col-md-3 col-12 mt-2">
+                                <label class="form-label font-weight-bold mb-1">{{ __('Status') }}</label>
+                                <select name="status" class="form-control">
+                                    <option value="">{{ __('All Statuses') }}</option>
+                                    <option value="0" {{ isset($status) && (string)$status === '0' ? 'selected' : '' }}>{{ __('Pending') }}</option>
+                                    <option value="1" {{ isset($status) && (string)$status === '1' ? 'selected' : '' }}>{{ __('Received') }}</option>
+                                    <option value="2" {{ isset($status) && (string)$status === '2' ? 'selected' : '' }}>{{ __('Cancelled') }}</option>
+                                </select>
                             </div>
+                            @if(auth()->user()->isSuperAdmin() || auth()->user()->role_id == 1)
+                            <div class="col-md-3 col-12 mt-2">
+                                <label class="form-label font-weight-bold mb-1">{{ __('From Branch') }}</label>
+                                <select name="from_branch_id" class="form-control">
+                                    <option value="">{{ __('All Branches') }}</option>
+                                    @foreach ($branches ?? [] as $b)
+                                        <option value="{{ $b->id }}" {{ ($from_branch_id ?? '') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3 col-12 mt-2">
+                                <label class="form-label font-weight-bold mb-1">{{ __('To Branch') }}</label>
+                                <select name="to_branch_id" class="form-control">
+                                    <option value="">{{ __('All Branches') }}</option>
+                                    @foreach ($branches ?? [] as $b)
+                                        <option value="{{ $b->id }}" {{ ($to_branch_id ?? '') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3 col-12 mt-2 d-flex align-items-end">
+                                <button type="submit" class="btn add_list_btn mr-2">{{ __('Filter') }}</button>
+                                <a href="{{ route('transfer.index') }}" class="btn add_list_btn_reset mr-2">{{ __('Reset') }}</a>
+                                <a href="javascript:void(0);" class="btn add_list_btn ml-auto" onclick="window.print()">{{ __('Print') }}</a>
+                            </div>
+                            @else
+                            <div class="col-md-9 col-12 mt-2 d-flex align-items-end">
+                                <button type="submit" class="btn add_list_btn mr-2">{{ __('Filter') }}</button>
+                                <a href="{{ route('transfer.index') }}" class="btn add_list_btn_reset mr-2">{{ __('Reset') }}</a>
+                                <a href="javascript:void(0);" class="btn add_list_btn ml-auto" onclick="window.print()">{{ __('Print') }}</a>
+                            </div>
+                            @endif
                         </div>
                     </form>
-                    <div class="table-responsive mt-2">
+                    <div class="table-responsive mt-3">
                         <table id="datatable-buttons" class="table table-striped table-bordered">
                             <thead class="header_bg">
                                 <tr class="text-center">
@@ -92,11 +129,6 @@
                             <tbody>
                                 @forelse($transfers as $key => $data)
                                     @php
-                                        $transfer_items = App\Models\TransferItem::where(
-                                            'transfer_id',
-                                            $data->id,
-                                        )->get();
-
                                         $userBranchId = auth()->user()->branch_id;
                                         $filterBranchId = session('branch_filter_id', auth()->user()->branch_id);
                                         $receive = false;
@@ -111,6 +143,8 @@
                                                     $cancel = true;
                                                 }
                                             } else {
+                                                $receive = true;
+                                                $cancel = true;
                                             }
                                         } else {
                                             if ($userBranchId == $data->to_branch_id) {
@@ -121,41 +155,33 @@
                                                 $cancel = true;
                                             }
                                         }
-
                                     @endphp
                                     <tr class="text-center">
-                                        <td class="table_data_style_left">{{ $key + 1 }}</td>
+                                        <td class="table_data_style_left">{{ $transfers->firstItem() + $key }}</td>
                                         <td>{{ $data->date }}</td>
-                                        <td>{{ $data->transfer_no }}</td>
-                                        <td>{{ $data->fromBranch?->name }}</td>
-                                        <td>{{ $data->toBranch?->name }}</td>
-                                        <td>
-                                            @foreach ($transfer_items as $item)
-                                                @php
-                                                    $product = App\Models\Product::where(
-                                                        'id',
-                                                        $item->product_id,
-                                                    )->first();
-                                                    if ($product->unit->related_unit == null) {
-                                                        $qty = $item->main_qty;
-                                                    } else {
-                                                        $qty = 0;
-                                                    }
-                                                    
-                                                @endphp
-                                                <ul>
-                                                    <li>
-                                                        {{ $item->product?->name }}
-                                                        @if($item->product_variation_id != null)
-                                                            ({{ $item->product_variation->color?->color }}-{{ $item->product_variation->size?->size }})
-                                                        @endif
-                                                        (@if ($item->product->unit?->related_unit == null)
-                                                            {{ $item->main_qty . ' ' . $item->product->unit?->name }}
+                                        <td><strong>{{ $data->transfer_no }}</strong></td>
+                                        <td>{{ $data->fromBranch?->name ?? 'N/A' }}</td>
+                                        <td>{{ $data->toBranch?->name ?? 'N/A' }}</td>
+                                        <td class="text-left">
+                                            @foreach ($data->transferItems as $item)
+                                                <div class="mb-1">
+                                                    <strong>{{ $item->product?->name }}</strong>
+                                                    @if($item->product_variation_id != null && $item->product_variation)
+                                                        <span class="badge badge-info" style="font-size: 11px;">
+                                                            {{ $item->product_variation->color?->color ?? '' }} {{ $item->product_variation->size?->size ? '- '.$item->product_variation->size->size : '' }}
+                                                        </span>
+                                                    @endif
+                                                    <span class="text-muted">
+                                                        (@if ($item->product?->unit?->related_unit == null)
+                                                            {{ $item->main_qty . ' ' . ($item->product?->unit?->name ?? 'pcs') }}
                                                         @else
-                                                            {{ $item->main_qty . ' ' . $item->product->unit->name . ' ' . $item->sub_qty . ' ' . $item->product->unit->related_unit->name }}
+                                                            {{ $item->main_qty . ' ' . ($item->product->unit->name ?? '') . ' ' . $item->sub_qty . ' ' . ($item->product->unit->related_unit->name ?? '') }}
                                                         @endif)
-                                                    </li>
-                                                </ul>
+                                                    </span>
+                                                    @if(!empty($item->imei))
+                                                        <br><small class="text-muted"><i class="fa fa-barcode"></i> {{ $item->imei }}</small>
+                                                    @endif
+                                                </div>
                                             @endforeach
                                         </td>
                                         <td>

@@ -28,12 +28,22 @@ class StockTransferController extends Controller
         $data['startDate'] = $request->startDate;
         $data['endDate'] = $request->endDate;
         $data['product_id'] = $request->product_id;
+        $data['from_branch_id'] = $request->from_branch_id;
+        $data['to_branch_id'] = $request->to_branch_id;
+        $data['status'] = $request->status;
 
         $userBranchId = auth()->user()->branch_id;
         $filterBranchId = session('branch_filter_id', auth()->user()->branch_id);
         $branchId = ($userBranchId == 1) ? $filterBranchId : $userBranchId;
 
-        $query = Transfer::with(['fromBranch', 'toBranch', 'user']);
+        $query = Transfer::with([
+            'fromBranch',
+            'toBranch',
+            'user',
+            'transferItems.product.unit.related_unit',
+            'transferItems.product_variation.color',
+            'transferItems.product_variation.size'
+        ]);
 
         if ($branchId) {
             $query->where(function ($q) use ($branchId) {
@@ -42,27 +52,66 @@ class StockTransferController extends Controller
             });
         }
 
+        if ($request->filled('from_branch_id')) {
+            $query->where('from_branch_id', $request->from_branch_id);
+        }
+
+        if ($request->filled('to_branch_id')) {
+            $query->where('to_branch_id', $request->to_branch_id);
+        }
+
+        if ($request->filled('status') && $request->status !== '') {
+            $query->where('status', $request->status);
+        }
+
         if ($request->filled('startDate') && $request->filled('endDate')) {
             $sdate = Carbon::parse($request->startDate)->toDateString();
             $edate = Carbon::parse($request->endDate)->toDateString();
             $query->whereBetween('date', [$sdate, $edate]);
+        } elseif ($request->filled('startDate')) {
+            $sdate = Carbon::parse($request->startDate)->toDateString();
+            $query->whereDate('date', '>=', $sdate);
+        } elseif ($request->filled('endDate')) {
+            $edate = Carbon::parse($request->endDate)->toDateString();
+            $query->whereDate('date', '<=', $edate);
         }
 
+        // Filter by specific product selected in dropdown
+        if ($request->filled('product_id')) {
+            $productId = $request->product_id;
+            $query->whereHas('transferItems', function ($q) use ($productId) {
+                $q->where('product_id', $productId);
+            });
+        }
+
+        // Search by Transfer No / Note / Product Name / Barcode / Variation (Size/Color) / IMEI
         $barcode = $request->barcode ?? $request->invoice_no;
         $data['barcode'] = $barcode;
         if (!empty($barcode)) {
             $barcodeVal = trim($barcode);
             $query->where(function($q) use ($barcodeVal) {
-                $q->where('invoice_no', 'like', "%{$barcodeVal}%")
+                $q->where('transfer_no', 'like', "%{$barcodeVal}%")
+                  ->orWhere('note', 'like', "%{$barcodeVal}%")
                   ->orWhereHas('transferItems.product', function ($subQ) use ($barcodeVal) {
                       $subQ->where('barcode', $barcodeVal)
                            ->orWhere('barcode', 'like', "%{$barcodeVal}%")
                            ->orWhere('name', 'like', "%{$barcodeVal}%");
+                  })
+                  ->orWhereHas('transferItems.product_variation.size', function ($subQ) use ($barcodeVal) {
+                      $subQ->where('size', 'like', "%{$barcodeVal}%");
+                  })
+                  ->orWhereHas('transferItems.product_variation.color', function ($subQ) use ($barcodeVal) {
+                      $subQ->where('color', 'like', "%{$barcodeVal}%");
+                  })
+                  ->orWhereHas('transferItems', function ($subQ) use ($barcodeVal) {
+                      $subQ->where('imei', 'like', "%{$barcodeVal}%");
                   });
             });
         }
 
         $data['transfers'] = $query->orderBy('created_at', 'DESC')->paginate(20)->appends($request->all());
+        $data['products'] = Product::orderBy('name', 'ASC')->get(['id', 'name', 'barcode']);
+        $data['branches'] = Branch::orderBy('name', 'ASC')->get();
         return view('backend.pages.stock-transfer.index', $data);
     }
 
