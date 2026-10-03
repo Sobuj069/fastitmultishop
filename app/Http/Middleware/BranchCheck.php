@@ -25,6 +25,12 @@ class BranchCheck
                 Auth::guard('web')->logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
+                if ($request->expectsJson() || $request->is('api/*') || $request->ajax()) {
+                    return response()->json([
+                        'status' => 401,
+                        'message' => __('Your account is inactive. Please contact the administrator.')
+                    ], 401);
+                }
                 return redirect()->route('login')->withErrors([
                     'email' => __('Your account is inactive. Please contact the administrator.'),
                 ]);

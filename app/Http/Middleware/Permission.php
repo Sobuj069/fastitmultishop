@@ -15,9 +15,15 @@ class Permission
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $routeName = $request->route()->getName();
+        $routeName = $request->route() ? $request->route()->getName() : null;
         if (!check_permission($routeName)) {
-            session()->flash('error', 'You do not have permission to access this page');
+            if ($request->expectsJson() || $request->is('api/*') || $request->ajax()) {
+                return response()->json([
+                    'status' => 403,
+                    'message' => __('You do not have permission to access this page.')
+                ], 403);
+            }
+            session()->flash('error', __('You do not have permission to access this page'));
             return redirect()->back();
         }
         return $next($request);
