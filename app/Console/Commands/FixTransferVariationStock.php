@@ -31,7 +31,62 @@ class FixTransferVariationStock extends Command
      */
     public function handle()
     {
-        $this->info('Starting to fix historical transfer items without variation...');
+        $this->info('Step 1: Checking for received transfers missing destination purchase records...');
+
+        $receivedTransfers = Transfer::with('transferItems')->where('status', 1)->get();
+        $missingPurchasesCreated = 0;
+
+        foreach ($receivedTransfers as $transfer) {
+            $hasPurchase = Purchase::where('transfer_id', $transfer->id)->exists();
+            if (!$hasPurchase) {
+                $purchase_no = Purchase::where('is_transfer', 1)->orderBy('id', 'desc')->value('purchase_no');
+                $purchase_no = $purchase_no ? 'TR-' . str_pad((int) filter_var($purchase_no, FILTER_SANITIZE_NUMBER_INT) + 1, 3, '0', STR_PAD_LEFT) : 'TR-001';
+
+                $purchase = new Purchase();
+                $purchase->date = $transfer->date;
+                $purchase->transfer_id = $transfer->id;
+                $purchase->purchase_no = $purchase_no;
+                $purchase->estimated_amount = $transfer->total_amount;
+                $purchase->discount = 0;
+                $purchase->total_amount = $transfer->total_amount;
+                $purchase->total_paid = $transfer->total_amount;
+                $purchase->note = $transfer->note;
+                $purchase->is_transfer = 1;
+                $purchase->created_by = $transfer->transfer_receive_by ?: 1;
+                $purchase->branch_id = $transfer->to_branch_id;
+                $purchase->status = 1;
+                $purchase->save();
+
+                foreach ($transfer->transferItems as $item) {
+                    $find_unit = Product::find($item->product_id);
+                    $purchase_item = new PurchaseItem();
+                    $purchase_item->purchase_id = $purchase->id;
+                    $purchase_item->product_id = $item->product_id;
+                    $purchase_item->branch_id = $transfer->to_branch_id;
+                    $purchase_item->product_variation_id = $item->product_variation_id;
+                    $purchase_item->rate = $item->rate;
+                    $purchase_item->main_qty = $item->main_qty;
+                    $purchase_item->sub_qty = $item->sub_qty;
+
+                    if (!$find_unit || !$find_unit->unit || $find_unit->unit->related_unit == null) {
+                        $purchase_item->stock_qty = $item->main_qty;
+                    } else {
+                        $purchase_item->stock_qty = ($item->main_qty * $find_unit->unit->related_value) + $item->sub_qty;
+                    }
+
+                    $purchase_item->imei = $item->imei;
+                    $purchase_item->subtotal = $item->sub_total;
+                    $purchase_item->date = $transfer->date;
+                    $purchase_item->save();
+                }
+
+                $this->info("Created missing Purchase #{$purchase->id} ({$purchase->purchase_no}) for Transfer #{$transfer->id} (TNO: {$transfer->transfer_no}) in Branch #{$transfer->to_branch_id}");
+                $missingPurchasesCreated++;
+            }
+        }
+
+        $this->info("Missing transfer purchases created: {$missingPurchasesCreated}");
+        $this->info('Step 2: Fixing historical transfer items without variation...');
 
         $transferPurchases = Purchase::where('is_transfer', 1)->get();
         $fixedCount = 0;
