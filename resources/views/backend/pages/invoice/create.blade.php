@@ -337,13 +337,12 @@
                                 @csrf
                                 <div class="cart-container">
                                     <div class="cart-head">
-                                        @if (auth()->user()->branch_id == 1)
-                                            <input type="hidden" name="branch_id" id="branch_id"
-                                                value="{{ $filterBranchId }}">
-                                        @else
-                                            <input type="hidden" name="branch_id" id="branch_id"
-                                                value="{{ auth()->user()->branch_id }}">
-                                        @endif
+                                        @php
+                                            $currentActiveBranchId = (auth()->user()->branch_id == 1 && $filterBranchId) 
+                                                ? $filterBranchId 
+                                                : auth()->user()->branch_id;
+                                        @endphp
+                                        <input type="hidden" name="branch_id" id="branch_id" value="{{ $currentActiveBranchId }}">
                                         <div class="input-group mb-3">
                                             <input type="date" class="form-control" id="date"
                                                 value="{{ date('Y-m-d') }}" name="date" max="{{ date('Y-m-d') }}" required>
@@ -607,13 +606,7 @@
                             @csrf
                             <div class="cart-container">
                                 <div class="cart-head">
-                                    @if (auth()->user()->branch_id == 1)
-                                        <input type="hidden" name="branch_id" id="branch_id"
-                                            value="{{ $filterBranchId }}">
-                                    @else
-                                        <input type="hidden" name="branch_id" id="branch_id"
-                                            value="{{ auth()->user()->branch_id }}">
-                                    @endif
+                                    <input type="hidden" name="branch_id" id="branch_id" value="{{ $currentActiveBranchId }}">
                                     <div class="input-group mb-3">
                                         <input type="date" class="form-control" id="date"
                                             value="{{ date('Y-m-d') }}" name="date" max="{{ date('Y-m-d') }}" required>

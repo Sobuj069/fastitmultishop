@@ -3521,13 +3521,12 @@
                                 @endif
                                 <div class="cart-container">
                                     <div class="cart-search-header">
-                                        @if (auth()->user()->branch_id == 1)
-                                            <input type="hidden" name="branch_id" id="branch_id"
-                                                value="{{ $filterBranchId }}">
-                                        @else
-                                            <input type="hidden" name="branch_id" id="branch_id"
-                                                value="{{ auth()->user()->branch_id }}">
-                                        @endif
+                                        @php
+                                            $currentActiveBranchId = (auth()->user()->branch_id == 1 && $filterBranchId) 
+                                                ? $filterBranchId 
+                                                : auth()->user()->branch_id;
+                                        @endphp
+                                        <input type="hidden" name="branch_id" id="branch_id" value="{{ $currentActiveBranchId }}">
                                         <div class="row align-items-center ecommerce-sortby mb-3 mx-n1">
                                             <div class="col-auto px-1">
                                                 <button type="button" onclick="toggleKioskMode()" class="kiosk-toggle-btn" title="{{ __('Toggle View Mode') }}">
@@ -4223,13 +4222,7 @@
                             @csrf
                             <div class="cart-container">
                                 <div class="cart-search-header">
-                                    @if (auth()->user()->branch_id == 1)
-                                        <input type="hidden" name="branch_id" id="branch_id"
-                                            value="{{ $filterBranchId }}">
-                                    @else
-                                        <input type="hidden" name="branch_id" id="branch_id"
-                                            value="{{ auth()->user()->branch_id }}">
-                                    @endif
+                                    <input type="hidden" name="branch_id" id="branch_id" value="{{ $currentActiveBranchId }}">
                                     <div class="row align-items-center ecommerce-sortby mb-3 mx-n1">
                                         <div class="col-auto px-1">
                                             <button type="button" onclick="toggleKioskMode()" class="kiosk-toggle-btn" title="{{ __('Toggle View Mode') }}">
@@ -6197,14 +6190,37 @@
                 // parse stock quantity
                 let stockQty = parseStockQty(stockText, has_sub_unit, related_by);
 
+                // Get variation stock if applicable
+                let varStock = null;
+                if (variation_code && data.variations && data.variations.length > 0) {
+                    let selectedVar = data.variations.find(v => String(v.id) === String(variation_code));
+                    if (selectedVar) {
+                        varStock = parseFloat(selectedVar.stock) || 0;
+                    }
+                }
+
                 // stock check (skipped in Pre-Order edit mode)
-                if (!skipStockCheck && data.product.is_service == 0 && stockQty <= 0) {
-                    iziToast.error({
-                        title: "{{ __('Out of Stock!') }}",
-                        message: "{{ __('This product is out of stock. Please purchase more stock.') }}",
-                        position: "topRight",
-                    });
-                    return false;
+                if (!skipStockCheck && data.product.is_service == 0) {
+                    if (varStock !== null) {
+                        if (varStock <= 0) {
+                            iziToast.error({
+                                title: "{{ __('Out of Stock!') }}",
+                                message: "{{ __('Selected variation is out of stock.') }}",
+                                position: "topRight",
+                            });
+                            return false;
+                        }
+                    } else {
+                        let hasAnyVarStock = data.variations && data.variations.some(v => (parseFloat(v.stock) || 0) > 0);
+                        if (stockQty <= 0 && !hasAnyVarStock) {
+                            iziToast.error({
+                                title: "{{ __('Out of Stock!') }}",
+                                message: "{{ __('This product is out of stock. Please purchase more stock.') }}",
+                                position: "topRight",
+                            });
+                            return false;
+                        }
+                    }
                 }
 
                 // ===== New product add =====

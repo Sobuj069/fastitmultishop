@@ -76,8 +76,9 @@ class OthersController extends Controller
 
     public function productSearch(Request $request)
     {
-        $userBranchId   = auth()->user()->branch_id;
-        $filterBranchId = session('branch_filter_id', auth()->user()->branch_id);
+        $userBranchId   = auth()->user() ? auth()->user()->branch_id : 1;
+        $filterBranchId = session('branch_filter_id', $userBranchId);
+        $activeBranchId = $request->filled('branch_id') ? $request->branch_id : (($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId);
         $query          = trim(request('req'));
 
         // --- Variation barcode resolution ---
@@ -91,8 +92,8 @@ class OthersController extends Controller
                 ->where('is_service', 0)
                 ->first();
             if ($product) {
-                $product->stock_qty_text    = product_stock($product);
-                $product->stock_qty         = (float) product_fake_stock_val($product);
+                $product->stock_qty_text    = product_stock($product, $activeBranchId);
+                $product->stock_qty         = (float) product_fake_stock_val($product, $activeBranchId);
                 $product->matched_variation_id = $resolved['variation_id'];
                 return response()->json([$product]);
             }
@@ -425,12 +426,17 @@ class OthersController extends Controller
 
     public function productSearchDetails($my_id)
     {
+        $request = request();
+        $userBranchId = auth()->user() ? auth()->user()->branch_id : 1;
+        $filterBranchId = session('branch_filter_id', $userBranchId);
+        $activeBranchId = $request->filled('branch_id') ? $request->branch_id : (($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId);
+
         $data['product'] = Product::where('id', $my_id)->with('unit.related_unit')->where('status', 1)->limit(10)->first();
-        $data['stock_qty'] = product_stock_check($data['product']);
-        $data['pure_stock'] = product_fake_stock_val($data['product']);
+        $data['stock_qty'] = product_stock_check($data['product'], $activeBranchId);
+        $data['pure_stock'] = product_fake_stock_val($data['product'], $activeBranchId);
         $data['brand'] = Brand::find($data['product']->brand_id);
 
-        $data['imeis'] = $this->getProductImeis($my_id);
+        $data['imeis'] = $this->getProductImeis($my_id, $activeBranchId);
 
         // Warranty default: Product's set warranty first, or latest purchase warranty
         if (!empty($data['product']->warranty_value)) {
@@ -555,9 +561,9 @@ class OthersController extends Controller
 
     public function posProducts(Request $request)
     {
-        $userBranchId   = auth()->user()->branch_id;
-        $filterBranchId = session('branch_filter_id', auth()->user()->branch_id);
-        $activeBranchId = ($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId;
+        $userBranchId   = auth()->user() ? auth()->user()->branch_id : 1;
+        $filterBranchId = session('branch_filter_id', $userBranchId);
+        $activeBranchId = $request->filled('branch_id') ? $request->branch_id : (($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId);
         $showImei       = trim(strtolower(env('APP_IMEI'))) === 'yes';
 
         $productIds = \App\Models\BranchProduct::where('branch_id', $activeBranchId)->pluck('product_id');
@@ -581,10 +587,15 @@ class OthersController extends Controller
 
     public function productPosDetails($my_id)
     {
+        $request = request();
+        $userBranchId = auth()->user() ? auth()->user()->branch_id : 1;
+        $filterBranchId = session('branch_filter_id', $userBranchId);
+        $activeBranchId = $request->filled('branch_id') ? $request->branch_id : (($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId);
+
         $data['product'] = Product::where('id', $my_id)->with('unit.related_unit')->first();
-        $data['stock_qty'] = product_stock_check($data['product']);
+        $data['stock_qty'] = product_stock_check($data['product'], $activeBranchId);
         $data['brand'] = Brand::find($data['product']->brand_id);
-        $data['imeis'] = $this->getProductImeis($my_id);
+        $data['imeis'] = $this->getProductImeis($my_id, $activeBranchId);
         
         // Warranty default: Product's set warranty first, or latest purchase warranty
         if (!empty($data['product']->warranty_value)) {
@@ -608,8 +619,13 @@ class OthersController extends Controller
     public function productScPosDetails($my_id)
     {
         try {
+            $request = request();
+            $userBranchId = auth()->user() ? auth()->user()->branch_id : 1;
+            $filterBranchId = session('branch_filter_id', $userBranchId);
+            $activeBranchId = $request->filled('branch_id') ? $request->branch_id : (($userBranchId == 1 && $filterBranchId) ? $filterBranchId : $userBranchId);
+
             $data['product'] = Product::where('id', $my_id)->with('unit.related_unit')->first();
-            $data['stock_qty'] = product_stock($data['product']);
+            $data['stock_qty'] = product_stock($data['product'], $activeBranchId);
             if (env('APP_SC') == 'yes') {
                 $variations = $data['product']->product_variations()->with(['size', 'color'])->orderBy('variation_id')->get();
                 $dataa = [];
@@ -620,14 +636,14 @@ class OthersController extends Controller
                         'name' => $variation->product->name ?? $data['product']->name,
                         'size' => $variation->size->size ?? '',
                         'color' => $variation->color->color ?? '',
-                        'stock' => variation_stock($variation->id)
+                        'stock' => variation_stock($variation->id, $activeBranchId)
                     ];
                 }
                 $data['variations'] = $dataa;
             } else {
                 $data['variations'] = [];
             }
-            $data['imeis'] = $this->getProductImeis($my_id);
+            $data['imeis'] = $this->getProductImeis($my_id, $activeBranchId);
     
             // Warranty default: Product's set warranty first, or latest purchase warranty
             if (!empty($data['product']->warranty_value)) {
