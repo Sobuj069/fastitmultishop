@@ -326,6 +326,9 @@
 @endpush
 
 @section('invoice')
+    @php
+        $currentActiveBranchId = $currentActiveBranchId ?? ((auth()->user()->branch_id == 1 && ($filterBranchId ?? null)) ? $filterBranchId : auth()->user()->branch_id);
+    @endphp
     @if (auth()->user()->branch_id == 1)
         @if ($filterBranchId != null)
             <div class="invoice-contentbar">
@@ -337,11 +340,6 @@
                                 @csrf
                                 <div class="cart-container">
                                     <div class="cart-head">
-                                        @php
-                                            $currentActiveBranchId = (auth()->user()->branch_id == 1 && $filterBranchId) 
-                                                ? $filterBranchId 
-                                                : auth()->user()->branch_id;
-                                        @endphp
                                         <input type="hidden" name="branch_id" id="branch_id" value="{{ $currentActiveBranchId }}">
                                         <div class="input-group mb-3">
                                             <input type="date" class="form-control" id="date"

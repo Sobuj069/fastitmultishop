@@ -3470,6 +3470,7 @@
 
 @section('invoice')
     @php
+        $currentActiveBranchId = $currentActiveBranchId ?? ((auth()->user()->branch_id == 1 && ($filterBranchId ?? null)) ? $filterBranchId : auth()->user()->branch_id);
         $show_imei = trim(strtolower(env('APP_IMEI'))) == 'yes';
         $show_warranty = trim(strtolower(env('APP_WARRANTY'))) == 'yes';
         $extra_cols = ($show_imei ? 1 : 0) + ($show_warranty ? 1 : 0);
@@ -3521,11 +3522,6 @@
                                 @endif
                                 <div class="cart-container">
                                     <div class="cart-search-header">
-                                        @php
-                                            $currentActiveBranchId = (auth()->user()->branch_id == 1 && $filterBranchId) 
-                                                ? $filterBranchId 
-                                                : auth()->user()->branch_id;
-                                        @endphp
                                         <input type="hidden" name="branch_id" id="branch_id" value="{{ $currentActiveBranchId }}">
                                         <div class="row align-items-center ecommerce-sortby mb-3 mx-n1">
                                             <div class="col-auto px-1">

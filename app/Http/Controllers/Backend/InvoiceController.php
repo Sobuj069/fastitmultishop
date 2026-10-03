@@ -410,8 +410,11 @@ class InvoiceController extends Controller
         $data['bank_accounts'] = BankAccount::where('status', 1)->get();
         $data['platforms'] = \App\Models\Platform::where('status', 1)->orderBy('name', 'asc')->get();
         $data['hold_count'] = \App\Models\HoldInvoice::where('branch_id', $activeBranchId)->count();
+        $currentActiveBranchId = $activeBranchId;
+        $data['currentActiveBranchId'] = $currentActiveBranchId;
 
-        return view('backend.pages.invoice.sc-create', $data, compact('filterBranchId', 'userBranchId', 'quotation'));
+        $viewName = (env('APP_SC') == 'yes') ? 'backend.pages.invoice.sc-create' : 'backend.pages.invoice.create';
+        return view($viewName, $data, compact('filterBranchId', 'userBranchId', 'quotation', 'currentActiveBranchId'));
     }
 
     public function store(Request $request)
