@@ -176,10 +176,12 @@ class PurchaseController extends Controller
             return back()->with('error', 'Please select at least one product to purchase.');
         }
 
-        // Count how many products actually have a valid main_qty > 0
+        // Count how many products actually have a valid main_qty > 0 or sub_qty > 0
         $validItemsCount = 0;
         foreach ($request->new_product as $key => $productId) {
-            if (!empty($request->new_main_qty[$key]) && $request->new_main_qty[$key] > 0) {
+            $mainQty = (float)($request->new_main_qty[$key] ?? 0);
+            $subQty = (float)($request->new_sub_qty[$key] ?? 0);
+            if ($mainQty > 0 || $subQty > 0) {
                 $validItemsCount++;
             }
         }
@@ -192,16 +194,18 @@ class PurchaseController extends Controller
         $true_estimated_amount = 0;
         if ($request->new_product) {
             foreach ($request->new_product as $key => $product_id) {
-                if (empty($request->new_main_qty[$key]) || $request->new_main_qty[$key] == 0) continue;
+                $mainQty = (float)($request->new_main_qty[$key] ?? 0);
+                $subQty = (float)($request->new_sub_qty[$key] ?? 0);
+                if ($mainQty <= 0 && $subQty <= 0) continue;
                 $find_unit_id = Product::where('id', $product_id)->first();
                 if ($find_unit_id) {
                     $conversion_value = $find_unit_id->unit->related_value ?? 1;
                     if ($conversion_value == 0) $conversion_value = 1;
 
                     if ($find_unit_id->unit->related_unit == null) {
-                        $qty_for_calc = $request->new_main_qty[$key];
+                        $qty_for_calc = $mainQty;
                     } else {
-                        $qty_for_calc = $request->new_main_qty[$key] + (($request->new_sub_qty[$key] ?? 0) / $conversion_value);
+                        $qty_for_calc = $mainQty + ($subQty / $conversion_value);
                     }
                     $true_estimated_amount += $qty_for_calc * ($request->new_rate[$key] ?? 0);
                 }
@@ -298,10 +302,11 @@ class PurchaseController extends Controller
             if ($purchase->save()) {
                 // Save product_id and category_id in purchase_items table
                 foreach ($request->new_product as $key => $product_id) {
+                    $mainQty = (float)($request->new_main_qty[$key] ?? 0);
+                    $subQty = (float)($request->new_sub_qty[$key] ?? 0);
 
-                    // যদি main_qty 0 বা null হয়, তাহলে এই item skip করো
-                    // main_qty যদি 0 বা null হয়, তাহলে skip করো (create হবে না)
-                    if (empty($request->new_main_qty[$key]) || $request->new_main_qty[$key] == 0) {
+                    // main_qty এবং sub_qty দুটোই যদি 0 বা খালি হয়, তাহলে skip করো
+                    if ($mainQty <= 0 && $subQty <= 0) {
                         continue;
                     }
 
@@ -317,16 +322,19 @@ class PurchaseController extends Controller
                     $purchase_item->rate = $request->new_rate[$key];
 
                     if ($find_unit_id->unit->related_unit == null) {
-                        $purchase_item->main_qty = $request->new_main_qty[$key];
-                        $purchase_item->actual_main = $request->new_main_qty[$key];
-                        $purchase_item->stock_qty = $request->new_main_qty[$key];
+                        $purchase_item->main_qty = $mainQty;
+                        $purchase_item->actual_main = $mainQty;
+                        $purchase_item->stock_qty = $mainQty;
                     } else {
-                        $purchase_item->main_qty = $request->new_main_qty[$key];
-                        $purchase_item->sub_qty = $request->new_sub_qty[$key];
-                        $purchase_item->actual_main = $request->new_main_qty[$key];
-                        $purchase_item->actual_sub = $request->new_sub_qty[$key];
-                        $main = $request->new_main_qty[$key] * $find_unit_id->unit->related_value;
-                        $sub = $request->new_sub_qty[$key];
+                        $conversion_val = $find_unit_id->unit->related_value ?? 1;
+                        if ($conversion_val == 0) $conversion_val = 1;
+
+                        $purchase_item->main_qty = $mainQty;
+                        $purchase_item->sub_qty = $subQty;
+                        $purchase_item->actual_main = $mainQty;
+                        $purchase_item->actual_sub = $subQty;
+                        $main = $mainQty * $conversion_val;
+                        $sub = $subQty;
                         $purchase_item->stock_qty = $main + $sub;
                     }
 
@@ -344,9 +352,9 @@ class PurchaseController extends Controller
                     if ($conversion_value == 0) $conversion_value = 1;
 
                     if ($find_unit_id->unit->related_unit == null) {
-                        $qty_for_calc = $request->new_main_qty[$key];
+                        $qty_for_calc = $mainQty;
                     } else {
-                        $qty_for_calc = $request->new_main_qty[$key] + ($request->new_sub_qty[$key] / $conversion_value);
+                        $qty_for_calc = $mainQty + ($subQty / $conversion_value);
                     }
                     $calc_subtotal = $qty_for_calc * $request->new_rate[$key];
 
@@ -448,7 +456,9 @@ class PurchaseController extends Controller
 
         $validItemsCount = 0;
         foreach ($request->product_id as $key => $productId) {
-            if (!empty($request->new_main_qty[$key]) && $request->new_main_qty[$key] > 0) {
+            $mainQty = (float)($request->new_main_qty[$key] ?? 0);
+            $subQty = (float)($request->new_sub_qty[$key] ?? 0);
+            if ($mainQty > 0 || $subQty > 0) {
                 $validItemsCount++;
             }
         }
@@ -460,16 +470,18 @@ class PurchaseController extends Controller
         $true_estimated_amount = 0;
         if ($request->product_id) {
             foreach ($request->product_id as $key => $product_id) {
-                if (empty($request->new_main_qty[$key]) || $request->new_main_qty[$key] == 0) continue;
+                $mainQty = (float)($request->new_main_qty[$key] ?? 0);
+                $subQty = (float)($request->new_sub_qty[$key] ?? 0);
+                if ($mainQty <= 0 && $subQty <= 0) continue;
                 $find_unit_id = Product::find($product_id);
                 if ($find_unit_id) {
                     $conversion_value = $find_unit_id->unit->related_value ?? 1;
                     if ($conversion_value == 0) $conversion_value = 1;
 
                     if ($find_unit_id->unit->related_unit == null) {
-                        $qty_for_calc = $request->new_main_qty[$key];
+                        $qty_for_calc = $mainQty;
                     } else {
-                        $qty_for_calc = $request->new_main_qty[$key] + (($request->new_sub_qty[$key] ?? 0) / $conversion_value);
+                        $qty_for_calc = $mainQty + ($subQty / $conversion_value);
                     }
                     $true_estimated_amount += $qty_for_calc * ($request->new_rate[$key] ?? 0);
                 }
@@ -653,6 +665,12 @@ class PurchaseController extends Controller
             $bank_transaction = BankTransaction::where('purchase_id', $purchase->id)->delete();
             // ✅ Save new items
             foreach ($request->product_id as $key => $product_id) {
+                $main = (float)($request->new_main_qty[$key] ?? 0);
+                $sub = (float)($request->new_sub_qty[$key] ?? 0);
+
+                if ($main <= 0 && $sub <= 0) {
+                    continue;
+                }
 
                 $product = Product::with('unit.related_unit')->findOrFail($product_id);
 
@@ -681,9 +699,6 @@ class PurchaseController extends Controller
                     $is_return = $oldItemsData[$request->itemID[$key]]['is_return'];
                 }
 
-                $main = $request->new_main_qty[$key];
-                $sub = $request->new_sub_qty[$key] ?? 0;
-
                 if ($product->unit->related_unit == null) {
                     $purchase_item->main_qty = $main;
                     $purchase_item->actual_main = max(0, $main - $rtn_main);
@@ -695,7 +710,8 @@ class PurchaseController extends Controller
                     $new_original_stock = $main;
                     $purchase_item->stock_qty = max(0, $new_original_stock - $sold_qty);
                 } else {
-                    $conversion = $product->unit->related_value;
+                    $conversion = $product->unit->related_value ?? 1;
+                    if ($conversion == 0) $conversion = 1;
 
                     $purchase_item->main_qty = $main;
                     $purchase_item->actual_main = max(0, $main - $rtn_main);

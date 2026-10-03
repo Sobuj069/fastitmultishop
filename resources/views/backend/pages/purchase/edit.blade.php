@@ -261,13 +261,15 @@
                                                             data-value="{{ $item->stock_qty }}"
                                                             data-related="{{ $item->product->unit->related_value }}"
                                                             {{ $isImei ? 'readonly' : '' }}
-                                                            onkeydown="return event.keyCode !== 190" min="0">
+                                                            onkeydown="return event.keyCode !== 190" min="0"
+                                                            onchange="recalcRow(this)" oninput="recalcRow(this)">
                                                         <label class="mr-1"
                                                             style="padding-top: 5px;">{{ $item->product->unit->related_unit->name }}:</label>
                                                         <input type="number" value="{{ $item->sub_qty }}"
                                                             class="form-control sub_qty mr-1" style="width: 80px; flex: none;" name="new_sub_qty[{{ $key }}]"
                                                             onkeydown="return event.keyCode !== 190" min="0"
-                                                            max="{{ $item->product->unit->related_value - 1 }}">
+                                                            max="{{ $item->product->unit->related_value - 1 }}"
+                                                            onchange="recalcRow(this)" oninput="recalcRow(this)">
                                                     @endif
                                                 </div>
                                             </td>

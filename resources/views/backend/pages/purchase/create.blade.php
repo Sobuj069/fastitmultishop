@@ -636,7 +636,7 @@
                                                 data-related="${data.product.unit.related_value}" 
                                                 ${readonly}
                                                 onkeydown="return event.keyCode !== 190">
-                                                <input type="hidden" value="0" class="sub_qty" name="new_sub_qty[${data.product.id}]">
+                                                <input type="hidden" value="0" class="sub_qty" name="new_sub_qty[${index}]">
                                             <button class="btn btn-outline-secondary btn-increase" type="button" ${disabled}>+</button>
                                         </div>`;
                                 } else {
@@ -647,10 +647,10 @@
                                         <label class="mr-2 ml-4" style="padding-top: 8px;">${data.product.unit.name}:</label>
                                         <div class="input-group" style="width: 180px;">
                                             <button class="btn btn-outline-secondary btn-decrease" type="button" ${disabled}>-</button>
-                                            <input type="text" 
+                                            <input type="number" 
                                                 class="form-control main_qty" 
                                                 value="" 
-                                                min="1"
+                                                min="0"
                                                 name="new_main_qty[${index}]"  
                                                 data-related="${data.product.unit.related_value}" 
                                                 ${readonly}
@@ -658,7 +658,7 @@
                                             <button class="btn btn-outline-secondary btn-increase" type="button" ${disabled}>+</button>
                                         </div>
                                         <label class="mr-2" style="padding-top: 8px;">${data.product.unit.related_unit.name}:</label>
-                                        <input type="number" value="0" class="form-control sub_qty" style="width: 80px; flex: none;" name="new_sub_qty[${index}]" data-related="${data.product.unit.related_value}"  onkeydown="return event.keyCode !== 190" min="0">`;
+                                        <input type="number" value="0" class="form-control sub_qty" style="width: 80px; flex: none;" name="new_sub_qty[${index}]" data-related="${data.product.unit.related_value}"  onkeydown="return event.keyCode !== 190" min="0" max="${(data.product.unit.related_value || 1) - 1}">`;
                                 }
 
                                 let row = `
@@ -737,7 +737,7 @@
                                         <label class="ml-4 mr-2" style="padding-top: 8px;">${data.product.unit.name}:</label>
                                         <div class="input-group" style="width: 180px;">
                                             <button class="btn btn-outline-secondary btn-decrease" type="button" ${disabled}>-</button>
-                                            <input type="number" value="" class="form-control col main_qty" name="new_main_qty[${data.product.id}]" min="1"  ${readonly} onkeydown="return event.keyCode !== 190" min="1">
+                                            <input type="number" value="" class="form-control col main_qty" name="new_main_qty[${data.product.id}]" min="1"  ${readonly} onkeydown="return event.keyCode !== 190">
                                             <input type="hidden" value="0" class="sub_qty" name="new_sub_qty[${data.product.id}]">
                                             <button class="btn btn-outline-secondary btn-increase" type="button" ${disabled}>+</button>
                                         </div>
@@ -750,16 +750,16 @@
                                         <div class="input-group" style="width: 180px;">
                                                     <button class="btn btn-outline-secondary btn-decrease" type="button" ${disabled}>-</button>
                                                     <input type="number" 
-                                                            class="form-control main_qty" 
+                                                             class="form-control main_qty" 
                                                              value="" 
-                                                             min="1"
+                                                             min="0"
                                                              name="new_main_qty[${data.product.id}]"  data-related="${data.product.unit.related_value}" 
                                                              ${readonly}
                                                              onkeydown="return event.keyCode !== 190">
                                                      <button class="btn btn-outline-secondary btn-increase" type="button" ${disabled}>+</button>
                                                  </div>
                                          <label class="mr-2 ml-4" style="padding-top: 8px;">${data.product.unit.related_unit.name}:</label>
-                                         <input type="number" value="0" class="form-control sub_qty" style="width: 80px; flex: none;" name="new_sub_qty[${data.product.id}]"  onkeydown="return event.keyCode !== 190" min="0">`;
+                                         <input type="number" value="0" class="form-control sub_qty" style="width: 80px; flex: none;" name="new_sub_qty[${data.product.id}]"  onkeydown="return event.keyCode !== 190" min="0" max="${(data.product.unit.related_value || 1) - 1}">`;
                             }
                             let row = `
                                 <tr>
@@ -860,8 +860,12 @@
                 if (e.target.classList.contains('btn-decrease')) {
                     let input = e.target.closest('.input-group').querySelector('.main_qty');
                     if (input && !input.hasAttribute('readonly')) {
-                        if (parseInt(input.value || 0) > 1) {
-                            input.value = parseInt(input.value) - 1;
+                        let row = input.closest('tr');
+                        let hasSubUnit = row ? (row.querySelector('.has_sub_unit')?.value === "true") : false;
+                        let minVal = hasSubUnit ? 0 : 1;
+                        let currentVal = parseInt(input.value || 0);
+                        if (currentVal > minVal) {
+                            input.value = currentVal - 1;
                             $(input).trigger('input');
                         }
                     }
@@ -883,18 +887,48 @@
                 updateGrandTotal(); // Recalculate grand total after removing a row
             });
 
-            // Update subtotal and Grand Total on quantity or rate change
-            $(document).on("input", ".main_qty, .rate", function() {
-                let row = $(this).closest("tr");
-                let qty = parseFloat(row.find(".main_qty").val()) || 0;
+            function recalculateRow(row) {
+                let mainQty = parseFloat(row.find(".main_qty").val()) || 0;
+                let subQty = parseFloat(row.find(".sub_qty").val()) || 0;
                 let rate = parseFloat(row.find(".rate").val()) || 0;
-                let subtotal = qty * rate;
+                let hasSubUnit = row.find(".has_sub_unit").val() === "true";
+                let conversion = parseFloat(row.find(".conversion").val()) || 1;
+                if (conversion <= 0) conversion = 1;
+
+                let totalQty = mainQty;
+                if (hasSubUnit) {
+                    totalQty = mainQty + (subQty / conversion);
+                }
+
+                let subtotal = totalQty * rate;
 
                 row.find(".sub_total").text(subtotal.toFixed(2) +
                     " {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}");
                 row.find(".subtotal_input").val(subtotal.toFixed(2));
 
                 updateGrandTotal();
+            }
+
+            // Update subtotal and Grand Total on quantity or rate change
+            $(document).on("input", ".main_qty, .rate", function() {
+                let row = $(this).closest("tr");
+                recalculateRow(row);
+            });
+
+            $(document).on("input", ".sub_qty", function() {
+                let row = $(this).closest("tr");
+                let subQty = parseFloat($(this).val()) || 0;
+                let conversion = parseFloat(row.find(".conversion").val()) || 1;
+                let maxSubQty = conversion > 1 ? conversion - 1 : 0;
+                if (conversion > 1 && subQty > maxSubQty) {
+                    $(this).val(maxSubQty);
+                    iziToast.warning({
+                        title: "{{ __('Sub unit exceeds maximum allowed based on quantity!') }}",
+                        position: "topRight",
+                    });
+                }
+
+                recalculateRow(row);
             });
 
             $(document).on("input", ".discount_input", function() {
@@ -943,83 +977,6 @@
                 $(".vat_amount").val(amount.toFixed(2));
 
                 updatePayableAmount();
-            });
-
-            $(document).on("input", ".sub_qty", function() {
-                let row = $(this).closest("tr");
-                let mainQty = parseFloat(row.find(".main_qty").val()) || 0;
-                let subQty = parseFloat($(this).val()) || 0;
-                let conversion = parseFloat(row.find(".conversion").val()) || 1;
-                let maxSubQty = conversion - 1; // max allowed sub unit = mainQty * conversion
-                if (subQty > maxSubQty) {
-                    $(this).val(maxSubQty);
-                    iziToast.warning({
-                        title: "{{ __('Sub unit exceeds maximum allowed based on quantity!') }}",
-                        position: "topRight",
-                    });
-                }
-
-                // Recalculate subtotal
-                let rate = parseFloat(row.find(".rate").val()) || 0;
-                let totalQty = mainQty + subQty / conversion;
-                let subtotal = totalQty * rate;
-
-                row.find(".sub_total").text(subtotal.toFixed(2) +
-                    " {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}");
-                row.find(".subtotal_input").val(subtotal.toFixed(2));
-
-                updateGrandTotal();
-            });
-
-            $(document).on("input", " .rate", function() {
-                let row = $(this).closest("tr");
-                let mainQty = parseFloat(row.find(".main_qty").val()) || 0;
-                let subQty = parseFloat(row.find(".sub_qty").val()) || 0;
-                let rate = parseFloat(row.find(".rate").val()) || 0;
-                let hasSubUnit = row.find(".has_sub_unit").val() === "true";
-                let conversion = parseFloat(row.find(".conversion").val()) || 1;
-
-                let totalQty = mainQty;
-                if (hasSubUnit) {
-                    totalQty += subQty / conversion; // Convert sub_qty to main unit equivalent
-                }
-
-                let subtotal = totalQty * rate;
-
-                row.find(".sub_total").text(subtotal.toFixed(2) +
-                    " {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}");
-                row.find(".subtotal_input").val(subtotal.toFixed(2));
-
-                updateGrandTotal();
-            });
-
-            $(document).on("input", ".main_qty", function() {
-                let row = $(this).closest("tr");
-                let mainQty = parseFloat($(this).val()) || 0;
-                let subQtyInput = row.find(".sub_qty");
-                let subQty = parseFloat(subQtyInput.val()) || 0;
-                let conversion = parseFloat(row.find(".conversion").val()) || 1;
-
-                let maxSubQty = mainQty * conversion;
-
-                if (subQty > maxSubQty) {
-                    subQtyInput.val(maxSubQty);
-                    iziToast.warning({
-                        title: "Sub unit adjusted to max allowed based on quantity!",
-                        position: "topRight",
-                    });
-                }
-
-                // Recalculate subtotal
-                let rate = parseFloat(row.find(".rate").val()) || 0;
-                let totalQty = mainQty + (parseFloat(subQtyInput.val()) || 0) / conversion;
-                let subtotal = totalQty * rate;
-
-                row.find(".sub_total").text(subtotal.toFixed(2) +
-                    " {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}");
-                row.find(".subtotal_input").val(subtotal.toFixed(2));
-
-                updateGrandTotal();
             });
 
             // Handle IMEI Modal Opening and Saving
