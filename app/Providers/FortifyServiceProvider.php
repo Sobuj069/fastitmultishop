@@ -34,6 +34,23 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
+        Fortify::authenticateUsing(function (Request $request) {
+            $user = \App\Models\User::where('email', $request->email)
+                ->orWhere('phone', $request->email)
+                ->first();
+
+            if ($user && \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+                if ($user->status != 1 && $user->status != 3) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        Fortify::username() => [__('Your account is inactive. Please contact the administrator.')],
+                    ]);
+                }
+                return $user;
+            }
+
+            return null;
+        });
+
         RateLimiter::for('login', function (Request $request) {
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
 

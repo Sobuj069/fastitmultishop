@@ -20,6 +20,16 @@ class BranchCheck
         if (Auth::check()) {
             $user = Auth::user();
 
+            // If user status is inactive (not 1 and not 3), immediately log them out
+            if ($user->status != 1 && $user->status != 3) {
+                Auth::guard('web')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                return redirect()->route('login')->withErrors([
+                    'email' => __('Your account is inactive. Please contact the administrator.'),
+                ]);
+            }
+
             // If user cannot switch branch (non-superadmin when branch switch is disabled or not permitted), lock session to assigned branch
             if (!can_switch_branch($user)) {
                 $userBranchId = $user->getRawOriginal('branch_id') ?: 1;
