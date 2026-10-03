@@ -4338,18 +4338,18 @@
                                                     $show_warranty = trim(strtolower(env('APP_WARRANTY'))) == 'yes';
                                                     $extra_cols = ($show_imei ? 1 : 0) + ($show_warranty ? 1 : 0);
                                                 @endphp<table class="table table-bordered text-center"><thead><tr class="header_bg text-white">
-                                                    <th class="header_style_left" width="32%">{{ __('Product') }}</th>
-                                                    <th width="10%">{{ __('Rate') }}</th>
+                                                    <th class="header_style_left" width="28%">{{ __('Product') }}</th>
+                                                    <th width="11%">{{ __('Rate') }}</th>
                                                     @if ($show_imei)
                                                         <th width="">{{ __('IMEI') }}</th>
                                                     @endif
                                                     @if ($show_warranty)
                                                         <th width="">{{ __('Warranty') }}</th>
                                                     @endif
-                                                    <th width="18%">{{ __('Quantity') }}</th>
-                                                    <th width="10%">{{ __('Discount') }}</th>
+                                                    <th width="22%">{{ __('Quantity') }}</th>
+                                                    <th width="12%">{{ __('Discount') }}</th>
                                                     <th width="12%">{{ __('Total') }}</th>
-                                                    <th class="header_style_right" width="2%">{{ __('Action') }}</th>
+                                                    <th class="header_style_right" width="3%">{{ __('Action') }}</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="tbody">
@@ -6985,12 +6985,28 @@
             let quantity_readonly = data.product.imei == 1 ? 'readonly' : '';
             let has_sub_unit = (data.product.unit && data.product.unit.related_unit != null);
             let related_by = (data.product.unit && data.product.unit.related_value) ? (parseFloat(data.product.unit.related_value) || 1) : 1;
-            let main_unit_name = data.product.unit ? (data.product.unit.name || 'Unit') : 'pcs';
-            let sub_unit_name = (has_sub_unit && data.product.unit.related_unit) ? data.product.unit.related_unit : 'gm';
+
+            let main_unit_name = 'pcs';
+            if (data.product.unit) {
+                if (typeof data.product.unit === 'object' && data.product.unit !== null) {
+                    main_unit_name = data.product.unit.name || 'Unit';
+                } else {
+                    main_unit_name = String(data.product.unit);
+                }
+            }
+
+            let sub_unit_name = 'gm';
+            if (has_sub_unit && data.product.unit.related_unit) {
+                if (typeof data.product.unit.related_unit === 'object' && data.product.unit.related_unit !== null) {
+                    sub_unit_name = data.product.unit.related_unit.name || 'gm';
+                } else {
+                    sub_unit_name = String(data.product.unit.related_unit);
+                }
+            }
 
             // Format stock_qty for display
             let displayStock = '';
-            if (typeof data.stock_qty === 'object' && data.stock_qty.available_stock) {
+            if (typeof data.stock_qty === 'object' && data.stock_qty !== null && data.stock_qty.available_stock !== undefined) {
                 displayStock = data.stock_qty.available_stock;
             } else {
                 displayStock = data.stock_qty;
@@ -7119,21 +7135,23 @@
                     <input type="hidden" class="has_sub_unit" value="true">
                     <input type="hidden" class="conversion" value="${related_by}">
                     <input type="hidden" class="quantity-input" data-related="${related_by}" data-stock="${displayStock}" value="${combinedDecimal}">
-                    <div class="d-flex align-items-center" style="gap: 4px; width: 100%;">
-                        <div class="input-group input-group-sm flex-nowrap" style="flex: 1; min-width: 0;" title="${main_unit_name}">
+                    <div class="d-flex align-items-center justify-content-between" style="gap: 3px; width: 100%;">
+                        <div class="input-group input-group-sm flex-nowrap" style="flex: 1 1 0; min-width: 0;" title="${main_unit_name}">
                             <input type="number" step="any" min="0" 
-                                class="form-control form-control-sm px-1 text-center main_qty_input" 
-                                value="${main_qty_val}" placeholder="0" style="height: 31px; font-weight: 600;" ${quantity_readonly}>
+                                class="form-control form-control-sm text-center main_qty_input" 
+                                value="${main_qty_val}" placeholder="0" 
+                                style="height: 31px; font-weight: 600; font-size: 13px; min-width: 30px; padding: 2px 2px !important;" ${quantity_readonly}>
                             <div class="input-group-append">
-                                <span class="input-group-text px-1 text-muted font-weight-bold" style="font-size: 10px; height: 31px;">${main_unit_name}</span>
+                                <span class="input-group-text text-muted font-weight-bold" style="font-size: 10px; height: 31px; padding: 0 4px !important; white-space: nowrap;">${main_unit_name}</span>
                             </div>
                         </div>
-                        <div class="input-group input-group-sm flex-nowrap" style="flex: 1; min-width: 0;" title="${sub_unit_name}">
+                        <div class="input-group input-group-sm flex-nowrap" style="flex: 1 1 0; min-width: 0;" title="${sub_unit_name}">
                             <input type="number" step="any" min="0" max="${related_by - 1}" 
-                                class="form-control form-control-sm px-1 text-center sub_qty_input" 
-                                value="${sub_qty_val}" placeholder="0" style="height: 31px; font-weight: 600;" ${quantity_readonly}>
+                                class="form-control form-control-sm text-center sub_qty_input" 
+                                value="${sub_qty_val}" placeholder="0" 
+                                style="height: 31px; font-weight: 600; font-size: 13px; min-width: 30px; padding: 2px 2px !important;" ${quantity_readonly}>
                             <div class="input-group-append">
-                                <span class="input-group-text px-1 text-muted font-weight-bold" style="font-size: 10px; height: 31px;">${sub_unit_name}</span>
+                                <span class="input-group-text text-muted font-weight-bold" style="font-size: 10px; height: 31px; padding: 0 4px !important; white-space: nowrap;">${sub_unit_name}</span>
                             </div>
                         </div>
                     </div>
@@ -7171,7 +7189,7 @@
 
             let dom = `
                     <tr id="tbody_tr" class="item-row" data-is-service="${data.product.is_service || 0}" data-product-id="${data.product.id}">
-                        <td class="table_data_style_left text-left" style="width: 30%; min-width: 130px;">
+                        <td class="table_data_style_left text-left" style="width: 28%; min-width: 120px;">
                             <span class="font-weight-bold">${data.product.name}</span>
                             ${data.product.is_service == 1 ? `<div class="text-info small mt-1 fw-bold">Cost: ${data.product.purchase_price || '0.00'} | Sale: ${data.product.selling_price || '0.00'}</div>` : ''}
                             <div class="mt-1">${variation_data}</div>
@@ -7185,7 +7203,7 @@
                                 value="${name.replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, '')}" name="name[]" />
                             <input type="hidden" value="${data.product.id}" name="product_id[]" />
                         </td>
-                        <td style="width: 12%; min-width: 80px;">
+                        <td style="width: 11%; min-width: 70px;">
                             <input type="text" style="width: 100%;" 
                                 class="form-control rate" 
                                 name="rate[]" value="${data.product.selling_price || 0}" placeholder="Rate" />
@@ -7205,10 +7223,10 @@
                                 ${warranty_data}
                             </td>
                         @endif
-                        <td style="width: 18%; min-width: 160px;">
+                        <td style="width: 22%; min-width: 170px;">
                             ${quantity_column_html}
                         </td>
-                        <td style="width: 13%; min-width: 110px;">
+                        <td style="width: 12%; min-width: 95px;">
                             <div class="input-group input-group-sm d-flex flex-nowrap align-items-center" style="width: 100%;">
                                 <input type="number" step="any" min="0" style="width: 58%; min-width: 45px; text-align: center; border-top-right-radius: 0; border-bottom-right-radius: 0; padding: 2px 4px; height: 31px;" 
                                     class="form-control product_discount_val" 
@@ -7221,12 +7239,12 @@
                                 <input type="hidden" class="product_discount" name="product_discount[]" value="0" />
                             </div>
                         </td>
-                        <td style="width: 12%; min-width: 85px;">
+                        <td style="width: 12%; min-width: 75px;">
                             <input type="text" style="width: 100%;" readonly 
                                 name="sub_total[]" class="form-control sub_total" 
                                 value="${initialSubtotal}"/>
                         </td>
-                        <td class="table_data_style_right" style="width: 3%; min-width: 40px;">
+                        <td class="table_data_style_right" style="width: 3%; min-width: 35px;">
                             <a href="#" class="remove-btn item-index text-danger" data-value="${index}">
                                 <i class="fa fa-trash"></i>
                             </a>
