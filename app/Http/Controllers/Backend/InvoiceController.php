@@ -413,7 +413,7 @@ class InvoiceController extends Controller
         $currentActiveBranchId = $activeBranchId;
         $data['currentActiveBranchId'] = $currentActiveBranchId;
 
-        $viewName = (env('APP_SC') == 'yes') ? 'backend.pages.invoice.sc-create' : 'backend.pages.invoice.create';
+        $viewName = 'backend.pages.invoice.sc-create';
         return view($viewName, $data, compact('filterBranchId', 'userBranchId', 'quotation', 'currentActiveBranchId'));
     }
 
