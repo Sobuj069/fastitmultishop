@@ -867,6 +867,7 @@
                 <x-input label="{{ __('Email') }}" type="email" name="email" placeholder="{{ __('Enter Email') }}" md="6" />
                 <x-input label="{{ __('Phone * (11 digits)') }}" type="text" name="phone" id="phone" placeholder="{{ __('Enter 11-digit Phone') }}" required minlength="11" md="6" />
                 <x-input label="{{ __('Delivery Address * (For Courier)') }}" type="text" name="address" placeholder="{{ __('Enter Full Address (House, Road, Area, District)') }}" required minlength="5" md="6" />
+            @endif
             @if(!is_hide_customer_dates())
             <x-input label="{{ __('Birth Date') }}" type="date" name="birth_date" md="6" />
             @endif
@@ -921,6 +922,8 @@
                     <button type="button" class="btn btn-primary" id="save_product_desc_btn">{{ __('Save Changes') }}</button>
                 </div>
             </div>
+        </div>
+    </div>
     @if(env('APP_MOBILE_SCANNER') == 'yes')
     <!-- Camera Barcode Scanner Modal -->
     <div class="modal fade" id="cameraScannerModal" tabindex="-1" role="dialog" aria-labelledby="cameraScannerModalLabel" aria-hidden="true">
@@ -2130,6 +2133,10 @@
             $('#cameraScannerModal').on('hidden.bs.modal', function () {
                 stopScanner();
             });
+        });
+    </script>
+    @endif
+
     <script>
         $(document).ready(function() {
             // Handle Sale Type dropdown change
