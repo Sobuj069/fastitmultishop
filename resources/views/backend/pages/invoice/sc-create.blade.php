@@ -3690,7 +3690,7 @@
                                                         style="border-top-right-radius: 0 !important;width: 40px !important; border-bottom-right-radius: 0 !important; flex: 1 1 auto; min-width: 0;">
                                                     <select class="form-control discount_type_select" name="discount_type"
                                                         style="max-width: 56px !important; min-width: 48px !important; padding: 0 2px !important; border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; border-left: 0 !important; font-size: 12px; font-weight: bold; background: #f8f9fa; cursor: pointer; text-align-last: center;">
-                                                        <option value="percent">%</option>
+                                                        <option value="percent" selected>%</option>
                                                         <option value="fixed">{{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</option>
                                                     </select>
                                                 </div>
@@ -3993,12 +3993,7 @@
                                                     <i class="fa-solid fa-clock mr-1"></i> {{ __('Pre-Order') }}
                                                 </button>
                                                 @endif
-                                                <button type="button" class="btn-pos-action btn-full-paid full_pay_btn d-none" title="Shortcut: F8" style="display: none !important;">
-                                                    <i class="fa-solid fa-circle-check mr-1"></i> {{ __('Full Paid') }} (F8)
-                                                </button>
-                                                <button type="button" class="btn-pos-action btn-full-due full_due_btn" title="Shortcut: F9">
-                                                    <i class="fa-solid fa-circle-minus mr-1"></i> {{ __('Full Due') }} (F9)
-                                                </button>
+                                                
                                                 <button type="button" class="btn-pos-action btn-checkout" id="checkout" title="Shortcut: F12">
                                                     <i class="fa-solid fa-check-double mr-1"></i> {{ __('Checkout') }} (F12)
                                                 </button>
@@ -6563,7 +6558,7 @@
                                     name="product_discount_val[]"
                                     value="0" placeholder="0" />
                                 <select class="form-control product_discount_type" name="product_discount_type[]" style="width: 42%; max-width: 52px; min-width: 44px; padding: 0 2px; border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 0; height: 31px; font-size: 11px; font-weight: 600; cursor: pointer; text-align-last: center; background: #f8f9fa;">
-                                    <option value="percent">%</option>
+                                    <option value="percent" selected>%</option>
                                     <option value="fixed">{{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</option>
                                 </select>
                                 <input type="hidden" class="product_discount" name="product_discount[]" value="0" />
@@ -8912,14 +8907,7 @@ $(document).on('input change', '.inst_last_due_date', function() {
                     $('.full_pay_btn:visible').first().click();
                 }
             }
-            // F9 for Full Due
-            if (event.key === 'F9') {
-                event.preventDefault();
-                if (!isInstallmentActive) {
-                    window.isExplicitSubmitAllowed = true;
-                    $('.full_due_btn:visible').first().click();
-                }
-            }
+            // F9 Full Due disabled
             // F12 for Checkout
             if (event.key === 'F12') {
                 event.preventDefault();
