@@ -318,7 +318,12 @@
                                             <input type="checkbox" class="invoiceCheckbox" value="{{ $data->id }}">
                                         </td>
                                         <td>{{ $key + 1 }}</td>
-                                        <td>{{ $data->date }}</td>
+                                        <td>
+                                            {{ $data->date }}
+                                            @if($data->created_at)
+                                                <br><small class="text-muted" style="font-size: 11px;">{{ date('h:i A', strtotime($data->created_at)) }}</small>
+                                            @endif
+                                        </td>
                                         <td>
                                             <strong>{{ $data->invoice_no }}</strong>
                                         </td>
@@ -337,6 +342,9 @@
                                                                 @endif @if (env('APP_SC') == 'yes')
                                                                     ({{ $item->product_variation?->size?->size }}-{{ $item->product_variation?->color?->color }})
                                                                 @endif
+                                                            @endif
+                                                            @if (env('APP_SC') == 'yes' && !empty($item->product?->barcode))
+                                                                <br><small class="text-muted">Barcode: {{ $item->product?->barcode }}</small>
                                                             @endif
                                                     </li>
                                                 </ul>
@@ -933,6 +941,9 @@
                                                                       @endif
                                                                       @if ($m_item->product_variation_id != null)
                                                                           <br><small class="text-muted">Variation: {{ $m_item->product_variation?->size?->size }}-{{ $m_item->product_variation?->color?->color }}</small>
+                                                                      @endif
+                                                                      @if (env('APP_SC') == 'yes' && !empty($m_item->product?->barcode))
+                                                                          <br><small class="text-muted">Barcode: {{ $m_item->product?->barcode }}</small>
                                                                       @endif
                                                                       @if (!empty($m_item->imei))
                                                                           <br><small class="text-muted">IMEI: {{ str_replace(',', ', ', $m_item->imei) }}</small>

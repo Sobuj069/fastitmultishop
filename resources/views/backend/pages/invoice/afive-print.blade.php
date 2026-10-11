@@ -239,6 +239,9 @@
                                             @if(env('APP_SC')=='yes' && $item->product_variation_id != null)
                                                 ({{ $item->product_variation?->size?->size }}-{{ $item->product_variation?->color?->color }})
                                             @endif
+                                            @if(env('APP_SC') == 'yes' && !empty($item->product?->barcode))
+                                                <br><small style="font-size: 11px; color: #555;">{{ $item->product?->barcode }}</small>
+                                            @endif
                                             @if($item->product_discount > 0)
                                                 <br><small><strong>Discount:</strong> 
                                                 @if(str_contains($item->product_discount, '%')) {{ $item->product_discount }} @else {{ number_format((float)$item->product_discount, 2) }} {{ empty(get_setting('com_currency')) ? '' : get_setting('com_currency') }} @endif

@@ -505,7 +505,12 @@
                                         }
                                     @endphp
                                     <tr>
-                                        <td style="text-align: left; padding: 2px 5px 2px 0; vertical-align: top;">{{ $productName }}</td>
+                                        <td style="text-align: left; padding: 2px 5px 2px 0; vertical-align: top;">
+                                            {{ $productName }}
+                                            @if (env('APP_SC') == 'yes' && !empty($item->product?->barcode))
+                                                <br><span style="font-size: 11px; font-weight: normal; color: #333;">{{ $item->product?->barcode }}</span>
+                                            @endif
+                                        </td>
                                         <td style="text-align: left; padding: 2px 0; vertical-align: top;">{{ (float) $qty }}</td>
                                         <td style="text-align: left; padding: 2px 0; vertical-align: top;">{{ (float) $item->rate }}</td>
                                         <td style="text-align: left; padding: 2px 0; vertical-align: top;">{{ $item->product_discount ? (str_contains($item->product_discount, '%') ? $item->product_discount : (float) $item->product_discount) : '-' }}</td>
@@ -518,7 +523,7 @@
 
                                 </tbody>
                             </table>
-                            <div style="font-size: 1em; font-weight: bold; margin-bottom: 10px; margin-top: 5px;">ITEMS COUNT: {{ $totalItems }}</div>
+                            <div style="font-size: 1em; font-weight: bold; margin-bottom: 10px; margin-top: 5px;">ITEM QTY COUNT: {{ (float) $totalQty }}</div>
                             @php
                                 $cash = App\Models\BankTransaction::where('invoice_id', $invoice->id)->get();
                                 $cash_amount = App\Models\BankTransaction::where('invoice_id', $invoice->id)

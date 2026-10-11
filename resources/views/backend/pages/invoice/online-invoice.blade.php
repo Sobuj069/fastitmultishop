@@ -472,7 +472,12 @@
                                         <tr class="text-center border_item">
                                             <td>{{ ++$key }}</td>
                                             <td style="text-align: left; padding-left: 5px;">
-                                                <p style="margin: 0;">{{ $item->product?->name }}</p>
+                                                <p style="margin: 0;">
+                                                    {{ $item->product?->name }}
+                                                    @if(env('APP_SC') == 'yes' && !empty($item->product?->barcode))
+                                                        <br><small style="font-size: 11px; color: #555;">{{ $item->product?->barcode }}</small>
+                                                    @endif
+                                                </p>
                                             </td>
                                             <td>{{ $item->product_discount }} </td>
                                             <td>{{ $item->rate }} </td>

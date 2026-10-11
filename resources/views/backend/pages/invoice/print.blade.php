@@ -649,6 +649,7 @@
                         $regularItems = [];
                         $serviceItems = [];
                         $hasProductDiscount = false;
+                        $totalPrintQty = 0;
 
                         foreach ($groupedItems as $group) {
                             $item = $group->first();
@@ -662,6 +663,14 @@
                             $displayItem->sub_qty = $comb_sub;
                             $displayItem->actual_sub = $comb_sub;
                             $displayItem->subtotal = $comb_subtotal;
+
+                            $productObj = App\Models\Product::where('id', $item->product_id)->with('unit.related_unit')->first();
+                            if ($productObj && $productObj->unit && $productObj->unit->related_unit != null) {
+                                $relVal = $productObj->unit->related_value ?: 1;
+                                $totalPrintQty += $comb_main + ($comb_sub / $relVal);
+                            } else {
+                                $totalPrintQty += $comb_main;
+                            }
 
                             if (!empty($item->product_discount) && ((float)$item->product_discount > 0 || str_contains($item->product_discount, '%'))) {
                                 $hasProductDiscount = true;
@@ -719,6 +728,9 @@
                                             @if(env('APP_SC') == 'yes' && $item->product_variation_id != null)
                                                 ({{ $item->product_variation?->size?->size }}-{{ $item->product_variation?->color?->color }})
                                             @endif
+                                            @if(env('APP_SC') == 'yes' && !empty($item->product?->barcode))
+                                                <br><small style="font-size: 11px; color: #555;">{{ $item->product?->barcode }}</small>
+                                            @endif
                                             @if(env('APP_IMEI') == 'yes' && !empty($item->imei))
                                                 <br><small><strong>IMEI:</strong> {{ str_replace("\n", ", ", $item->imei) }}</small>
                                             @endif
@@ -773,6 +785,9 @@
                                             @if(env('APP_SC') == 'yes' && $item->product_variation_id != null)
                                                 ({{ $item->product_variation?->size?->size }}-{{ $item->product_variation?->color?->color }})
                                             @endif
+                                            @if(env('APP_SC') == 'yes' && !empty($item->product?->barcode))
+                                                <br><small style="font-size: 11px; color: #555;">{{ $item->product?->barcode }}</small>
+                                            @endif
                                             @if(env('APP_IMEI') == 'yes' && !empty($item->imei))
                                                 <br><small><strong>IMEI:</strong> {{ str_replace("\n", ", ", $item->imei) }}</small>
                                             @endif
@@ -797,6 +812,7 @@
                             @endif
                         </tbody>
                     </table>
+                    <div style="font-size: 11px; font-weight: bold; margin-top: 6px; margin-bottom: 6px;">ITEM QTY COUNT: {{ (float) $totalPrintQty }}</div>
 
                     {{-- ══ INWORDS + TOTALS ══ --}}
                     <div class="inv-totals-container">

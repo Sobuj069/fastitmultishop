@@ -3993,7 +3993,12 @@
                                                     <i class="fa-solid fa-clock mr-1"></i> {{ __('Pre-Order') }}
                                                 </button>
                                                 @endif
-                                                
+                                                <button type="button" class="btn-pos-action btn-full-paid full_pay_btn d-none" title="Shortcut: F8" style="display: none !important;">
+                                                    <i class="fa-solid fa-circle-check mr-1"></i> {{ __('Full Paid') }} (F8)
+                                                </button>
+                                                <button type="button" class="btn-pos-action btn-full-due full_due_btn" title="Shortcut: F9">
+                                                    <i class="fa-solid fa-circle-minus mr-1"></i> {{ __('Full Due') }} (F9)
+                                                </button>
                                                 <button type="button" class="btn-pos-action btn-checkout" id="checkout" title="Shortcut: F12">
                                                     <i class="fa-solid fa-check-double mr-1"></i> {{ __('Checkout') }} (F12)
                                                 </button>
@@ -6518,6 +6523,9 @@
                             <span class="font-weight-bold">${data.product.name}</span>
                             ${data.product.is_service == 1 ? `<div class="text-info small mt-1 fw-bold">Cost: ${data.product.purchase_price || '0.00'} | Sale: ${data.product.selling_price || '0.00'}</div>` : ''}
                             <div class="mt-1">${variation_data}</div>
+                            @if (env('APP_SC') == 'yes')
+                            ${data.product.barcode ? `<div class="small text-muted font-monospace"><i class="fa fa-barcode mr-1"></i>${data.product.barcode}</div>` : ''}
+                            @endif
                             <div class="product-description-container mt-1 d-flex align-items-center">
                                 <span class="product-desc-text text-muted small" style="max-width: 180px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${data.product.description || ''}</span>
                                 <a href="javascript:void(0)" class="edit-description-btn ml-2" data-id="${data.product.id}" data-name="${data.product.name.replace(/"/g, '&quot;')}" style="cursor: pointer;">
@@ -8907,7 +8915,14 @@ $(document).on('input change', '.inst_last_due_date', function() {
                     $('.full_pay_btn:visible').first().click();
                 }
             }
-            // F9 Full Due disabled
+            // F9 for Full Due
+            if (event.key === 'F9') {
+                event.preventDefault();
+                if (!isInstallmentActive) {
+                    window.isExplicitSubmitAllowed = true;
+                    $('.full_due_btn:visible').first().click();
+                }
+            }
             // F12 for Checkout
             if (event.key === 'F12') {
                 event.preventDefault();

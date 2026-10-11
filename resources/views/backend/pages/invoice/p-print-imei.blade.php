@@ -475,6 +475,7 @@
                                     $printItems = $invoice->invoiceItems->groupBy(function($it) {
                                         return $it->product_id . '_' . ($it->product_variation_id ?? 0);
                                     });
+                                    $totalQty = 0;
                                 @endphp
                                 @foreach ($printItems as $key => $group)
                                     @php
@@ -488,13 +489,16 @@
                                         if ($product && $product->is_service == 0) {
                                             if ($product->unit?->related_unit == null) {
                                                 $qty = $comb_main . ' ' . $product->unit?->name;
+                                                $totalQty += (float) $comb_main;
                                             } else {
                                                 $related_value = $product->unit->related_value ?: 1;
                                                 $total_main = $comb_main + $comb_sub / $related_value;
                                                 $qty = $total_main . ' ' . $product->unit->name;
+                                                $totalQty += (float) $total_main;
                                             }
                                         } else {
                                             $qty = $comb_main . ' pcs';
+                                            $totalQty += (float) $comb_main;
                                         }
 
                                         $cash = App\Models\BankTransaction::where('invoice_id', $invoice->id)->get();
@@ -527,6 +531,9 @@
                                                             @endif
                                                         @endif
                                                     @endif
+                                                    @if (env('APP_SC') == 'yes' && !empty($item->product?->barcode))
+                                                        <br><small style="font-size: 11px; color: #444;">{{ $item->product?->barcode }}</small>
+                                                    @endif
                                                     @if(!empty($item->imei))
                                                         <br><small><strong>IMEI:</strong> {{ $item->imei }}</small>
                                                     @endif
@@ -540,6 +547,11 @@
                                     </tbody>
                                 @endforeach
                                 <tfoot class="tfoot_style">
+                                    <tr class="border_item">
+                                        <td colspan="6" class="text-left font-weight-bold" style="font-size: 1em; padding: 5px 0;">
+                                            ITEM QTY COUNT: {{ (float) $totalQty }}
+                                        </td>
+                                    </tr>
                                     @php
                                         $subTotalDisplay = ((float) $invoice->estimated_amount > 0)
                                             ? (float) $invoice->estimated_amount

@@ -263,6 +263,9 @@
                                             @if ($item->product_variation_id != null)
                                                 <br><small class="text-muted">Variation: {{ $item->product_variation?->size?->size }}-{{ $item->product_variation?->color?->color }}</small>
                                             @endif
+                                            @if (env('APP_SC') == 'yes' && !empty($item->product?->barcode))
+                                                <br><small class="text-muted">Barcode: {{ $item->product?->barcode }}</small>
+                                            @endif
                                             @if (!empty($item->imei))
                                                 <br><small class="text-muted">IMEI: {{ str_replace(',', ', ', $item->imei) }}</small>
                                             @endif

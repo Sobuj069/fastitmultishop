@@ -438,6 +438,7 @@
                         $printItems = $invoice->invoiceItems->groupBy(function($it) {
                             return $it->product_id . '_' . ($it->product_variation_id ?? 0);
                         });
+                        $totalPrintQty = 0;
                     @endphp
                     {{-- ══ PRODUCT TABLE ══ --}}
                     <table class="inv-table">
@@ -460,6 +461,12 @@
                                     $comb_sub = $group->sum('actual_sub');
                                     $comb_subtotal = $group->sum('subtotal');
                                     $product = App\Models\Product::where('id', $item->product_id)->with('unit.related_unit')->first();
+                                    if ($product && $product->unit && $product->unit->related_unit != null) {
+                                        $relVal = $product->unit->related_value ?: 1;
+                                        $totalPrintQty += $comb_main + ($comb_sub / $relVal);
+                                    } else {
+                                        $totalPrintQty += $comb_main;
+                                    }
                                     if ($product && $product->unit) {
                                         if ($product->unit->name == 'pcs' || $product->unit->name == 'Pcs') {
                                             $qtyStr = number_format($comb_main, 2, '.', '');
@@ -480,6 +487,9 @@
                                         @endif
                                         @if(env('APP_SC') == 'yes' && $item->product_variation_id != null)
                                             ({{ $item->product_variation?->size?->size }}-{{ $item->product_variation?->color?->color }})
+                                        @endif
+                                        @if(env('APP_SC') == 'yes' && !empty($item->product?->barcode))
+                                            <br><small style="font-size: 11px; color: #555;">{{ $item->product?->barcode }}</small>
                                         @endif
                                         @if(env('APP_IMEI') == 'yes' && !empty($item->imei))
                                             <br><small><strong>IMEI:</strong> {{ str_replace("\n", ", ", $item->imei) }}</small>
@@ -504,6 +514,7 @@
                             @endforeach
                         </tbody>
                     </table>
+                    <div style="font-size: 11px; font-weight: bold; margin-top: 6px; margin-bottom: 6px;">ITEM QTY COUNT: {{ (float) $totalPrintQty }}</div>
 
                     {{-- ══ INWORDS + TOTALS ══ --}}
                     <div class="inv-totals-container">
