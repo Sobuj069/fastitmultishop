@@ -3690,8 +3690,8 @@
                                                         style="border-top-right-radius: 0 !important;width: 40px !important; border-bottom-right-radius: 0 !important; flex: 1 1 auto; min-width: 0;">
                                                     <select class="form-control discount_type_select" name="discount_type"
                                                         style="max-width: 56px !important; min-width: 48px !important; padding: 0 2px !important; border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; border-left: 0 !important; font-size: 12px; font-weight: bold; background: #f8f9fa; cursor: pointer; text-align-last: center;">
-                                                        <option value="percent" selected>%</option>
-                                                        <option value="fixed">{{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</option>
+                                                        <option value="fixed" selected>{{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</option>
+                                                        <option value="percent">%</option>
                                                     </select>
                                                 </div>
                                                 <input type="hidden" class="form-control discount_amount"
@@ -5305,7 +5305,7 @@
             let lineGross = (main_qty * unit_price) + (sub_qty * sub_unit_price);
 
             let discVal = parseFloat(row.find('.product_discount_val').val()) || 0;
-            let discType = row.find('.product_discount_type').val() || 'percent';
+            let discType = row.find('.product_discount_type').val() || 'fixed';
             let calculatedDiscountAmount = 0;
 
             if (discType === 'percent') {
@@ -6566,8 +6566,8 @@
                                     name="product_discount_val[]"
                                     value="0" placeholder="0" />
                                 <select class="form-control product_discount_type" name="product_discount_type[]" style="width: 42%; max-width: 52px; min-width: 44px; padding: 0 2px; border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 0; height: 31px; font-size: 11px; font-weight: 600; cursor: pointer; text-align-last: center; background: #f8f9fa;">
-                                    <option value="percent" selected>%</option>
-                                    <option value="fixed">{{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</option>
+                                    <option value="fixed" selected>{{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</option>
+                                    <option value="percent">%</option>
                                 </select>
                                 <input type="hidden" class="product_discount" name="product_discount[]" value="0" />
                             </div>
@@ -7165,7 +7165,7 @@
             let displayQty = Number.isInteger(totalQty) ? totalQty : parseFloat(totalQty.toFixed(3));
             $(".total_item").text(displayQty);
 
-            let discountType = $(".discount_type_select:visible").first().val() || $(".discount_type_select").val() || 'percent';
+            let discountType = $(".discount_type_select:visible").first().val() || $(".discount_type_select").val() || 'fixed';
             let discountVal = parseFloat($(".discount_val_input:visible").first().val() || $(".discount_val_input").val()) || 0;
             let estimated_amount = parseFloat(
                 $("input[name='estimated_amount']").val()
@@ -7781,7 +7781,7 @@
                         rate: row.find(".rate").val() || 0,
                         product_discount: row.find(".product_discount").val() || 0,
                         product_discount_val: row.find(".product_discount_val").val() || 0,
-                        product_discount_type: row.find(".product_discount_type").val() || 'percent',
+                        product_discount_type: row.find(".product_discount_type").val() || 'fixed',
                         sub_total: row.find(".sub_total").val() || 0,
                         variation_id: row.find("select[name='variation_id[]']").val() || row.find("input[name='variation_id[]']").val() || '',
                         imei: row.find(".imei_input").val() || '',
@@ -8111,7 +8111,7 @@
                             rate: parseFloat(row.find(".rate").val()) || 0,
                             product_discount: parseFloat(row.find(".product_discount").val()) || 0,
                             product_discount_val: parseFloat(row.find(".product_discount_val").val()) || 0,
-                            product_discount_type: row.find(".product_discount_type").val() || 'percent',
+                            product_discount_type: row.find(".product_discount_type").val() || 'fixed',
                             sub_total: parseFloat(row.find(".sub_total").val()) || 0,
                             imei: row.find(".imei_input").val() || '',
                             product_name: row.find(".item-name, td:first").text().trim()
