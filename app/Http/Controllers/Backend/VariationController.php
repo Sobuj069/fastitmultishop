@@ -22,20 +22,32 @@ class VariationController extends Controller
     public function generateVariations()
     {
         // Fetch all sizes and colors
-        $sizes = ProductSize::all();
-        $colors = ProductColor::all();
+        $sizes = ProductSize::pluck('id');
+        $colors = ProductColor::pluck('id');
 
         // Clear existing variations
         Variation::truncate();
 
-        // Generate combinations
-        foreach ($sizes as $size) {
-            foreach ($colors as $color) {
-                Variation::create([
-                    'size_id' => $size->id,
-                    'color_id' => $color->id,
-                ]);
+        // Generate combinations using bulk insert
+        $now = now();
+        $records = [];
+        foreach ($sizes as $sizeId) {
+            foreach ($colors as $colorId) {
+                $records[] = [
+                    'size_id' => $sizeId,
+                    'color_id' => $colorId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+                if (count($records) >= 1000) {
+                    Variation::insert($records);
+                    $records = [];
+                }
             }
+        }
+
+        if (!empty($records)) {
+            Variation::insert($records);
         }
 
         return response()->json(['message' => 'Variations generated successfully.']);

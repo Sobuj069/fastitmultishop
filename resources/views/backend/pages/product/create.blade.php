@@ -401,12 +401,16 @@
                     @csrf
                     <div class="modal-header">
                         <h5 class="modal-title" id="exampleModalLabel">{{ __('Add New Color') }}</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label ml-3"> {{ __('Color Name') }} </label>
                             <input type="text" class="form-control" name="color_name" placeholder="{{ __('Color Name') }}">
                         </div>
+                        <div id="colorError" class="text-danger mt-1"></div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn cancel_btn" data-dismiss="modal">{{ __('Close') }}</button>
@@ -449,94 +453,98 @@
 
             $('#addColorForm').on('submit', function(e) {
                 e.preventDefault();
+                var $form = $(this);
+                var $btn = $form.find('button[type="submit"]');
+                var originalHtml = $btn.html();
+
+                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> {{ __("Saving...") }}');
+                $('#colorError').text('');
 
                 $.ajax({
                     url: "{{ route('color.ajaxStore') }}",
                     type: "POST",
-                    data: $(this).serialize(),
+                    data: $form.serialize(),
                     success: function(response) {
-
-                        // Modal hide
                         $('#addColorModal').modal('hide');
-                        $('#addColorForm')[0].reset();
+                        $form[0].reset();
                         $('#colorError').text('');
-                        if (response.color) {
-                            // Create new option
-                            var newOption = new Option(response.color.color_name, response.color
-                                .id, false, false);
 
-                            // Append to select2
+                        if (response.color) {
+                            var newOption = new Option(response.color.color_name, response.color.id, false, false);
                             $('select.product_color').append(newOption);
 
-                            // ✅ Get current selected values
                             var currentValues = $('select.product_color').val() || [];
-
-                            // ✅ Add new value to selected values array
                             currentValues.push(response.color.id.toString());
 
-                            // ✅ Set multiple values
                             $('select.product_color').val(currentValues).trigger('change');
-
-                            // Refresh select2
                             $('select.product_color').trigger('change.select2');
                         }
+                        toastr.success(response.message || '{{ __("Color created successfully") }}');
                     },
                     error: function(xhr) {
                         if (xhr.status === 422) {
-                            $('#colorError').text(xhr.responseJSON.errors.color_name[0]);
+                            var errMsg = (xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors.color_name)
+                                ? xhr.responseJSON.errors.color_name[0]
+                                : (xhr.responseJSON?.message || '{{ __("Validation error") }}');
+                            $('#colorError').text(errMsg);
+                            toastr.error(errMsg);
                         } else {
-                            toastr.error('Something went wrong!');
+                            var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : '{{ __("Something went wrong!") }}';
+                            $('#colorError').text(msg);
+                            toastr.error(msg);
                         }
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false).html(originalHtml);
                     }
                 });
             });
-        });
-    </script>
-    <script>
-        $(document).ready(function() {
 
             $('#addSizeForm').on('submit', function(e) {
                 e.preventDefault();
+                var $form = $(this);
+                var $btn = $form.find('button[type="submit"]');
+                var originalHtml = $btn.html();
+
+                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> {{ __("Saving...") }}');
+                $('#sizeError').text('');
 
                 $.ajax({
                     url: "{{ route('size.ajaxStore') }}",
                     type: "POST",
-                    data: $(this).serialize(),
+                    data: $form.serialize(),
                     success: function(response) {
-
-                        // Modal hide
                         $('#addSizeModal').modal('hide');
-                        $('#addSizeForm')[0].reset();
+                        $form[0].reset();
                         $('#sizeError').text('');
 
-                        // ✅ Dynamically add new option to select2 WITHOUT page reload
                         if (response.size) {
-                            // Create new option
-                            var newOption = new Option(response.size.size_name, response.size
-                                .id, false, false);
-
-                            // Append to select2
+                            var newOption = new Option(response.size.size_name, response.size.id, false, false);
                             $('select.product_size').append(newOption);
 
-                            // ✅ Get current selected values
                             var currentValues = $('select.product_size').val() || [];
-
-                            // ✅ Add new value to selected values array
                             currentValues.push(response.size.id.toString());
 
-                            // ✅ Set multiple values
                             $('select.product_size').val(currentValues).trigger('change');
-
-                            // Refresh select2
                             $('select.product_size').trigger('change.select2');
                         }
+                        toastr.success(response.message || '{{ __("Size created successfully") }}');
                     },
                     error: function(xhr) {
                         if (xhr.status === 422) {
-                            $('#sizeError').text(xhr.responseJSON.errors.size_name[0]);
+                            var errMsg = (xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors.size_name)
+                                ? xhr.responseJSON.errors.size_name[0]
+                                : (xhr.responseJSON?.message || '{{ __("Validation error") }}');
+                            $('#sizeError').text(errMsg);
+                            toastr.error(errMsg);
                         } else {
-                            toastr.error('Something went wrong!');
+                            var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : '{{ __("Something went wrong!") }}';
+                            $('#sizeError').text(msg);
+                            toastr.error(msg);
                         }
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false).html(originalHtml);
                     }
                 });
             });

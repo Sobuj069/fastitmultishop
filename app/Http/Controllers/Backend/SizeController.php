@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use App\Models\ProductSize;
 use App\Models\ProductColor;
 use App\Models\Variation;
@@ -32,40 +33,66 @@ class SizeController extends Controller
      */
     public function store(Request $request)
     {
-        // $request->validate([
-        //     'size_name' => 'required|string|unique:product_sizes,size', // Correct column name in the 'product_sizes' table
-        // ], [
-        //     'size_name.unique' => 'This size already exists.', // Custom error message
-        // ]);
+        $request->validate([
+            'size_name' => 'required|string|max:255',
+        ]);
 
         $size = new ProductSize();
-        $size->size = $request->size_name;
+        $size->size = trim($request->size_name);
         $size->save();
-        $this->generateVariations();
+
+        $this->generateVariationsForSize($size->id);
 
         session()->flash('success', __('Size created successfully'));
         return back();
     }
+
     public function ajaxStore(Request $request)
     {
-        try {
-            $request->validate([
-                'size_name' => 'required|string|max:255|unique:product_sizes,size',
-            ]);
+        $validator = Validator::make($request->all(), [
+            'size_name' => 'required|string|max:255',
+        ]);
 
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'errors'  => $validator->errors()
+            ], 422);
+        }
+
+        $sizeName = trim($request->size_name);
+
+        // Check for existing size case-insensitively
+        $existing = ProductSize::whereRaw('LOWER(size) = ?', [strtolower($sizeName)])->first();
+        if ($existing) {
+            return response()->json([
+                'success' => false,
+                'message' => __('The size name has already been taken.'),
+                'errors'  => [
+                    'size_name' => [__('The size name has already been taken.')]
+                ],
+                'size'    => [
+                    'id' => $existing->id,
+                    'size_name' => $existing->size
+                ]
+            ], 422);
+        }
+
+        try {
             $size = new ProductSize();
-            $size->size = $request->size_name;
+            $size->size = $sizeName;
             $size->save();
 
-            // Generate variations
-            $this->generateVariations();
+            // Fast bulk insert only for this size (~0.01s instead of 90s)
+            $this->generateVariationsForSize($size->id);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Size created successfully',
-                'size' => [
+                'message' => __('Size created successfully'),
+                'size'    => [
                     'id' => $size->id,
-                    'size_name' => $size->size // ✅ Frontend-এ যেভাবে show করবে
+                    'size_name' => $size->size
                 ]
             ]);
         } catch (\Exception $e) {
@@ -75,6 +102,7 @@ class SizeController extends Controller
             ], 500);
         }
     }
+
     /**
      * Display the specified resource.
      */
@@ -105,26 +133,66 @@ class SizeController extends Controller
     public function destroy(string $id)
     {
         $size = ProductSize::find($id);
-        $size->delete();
+        if ($size) {
+            Variation::where('size_id', $size->id)->delete();
+            $size->delete();
+        }
         session()->flash('success', __('Size deleted successfully'));
         return back();
     }
 
-    function generateVariations()
+    /**
+     * Generate variations combinations for a single size (fast bulk insert)
+     */
+    public function generateVariationsForSize($sizeId)
     {
-        $sizes = ProductSize::all();
-        $colors = ProductColor::all();
+        $colors = ProductColor::pluck('id');
+        $now = now();
+        $records = [];
+        foreach ($colors as $colorId) {
+            $records[] = [
+                'size_id' => $sizeId,
+                'color_id' => $colorId,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+        if (!empty($records)) {
+            foreach (array_chunk($records, 1000) as $chunk) {
+                Variation::insert($chunk);
+            }
+        }
+    }
 
-        // Clear existing variations
+    /**
+     * Generate all variation combinations using chunked bulk inserts
+     */
+    public function generateVariations()
+    {
+        $sizes = ProductSize::pluck('id');
+        $colors = ProductColor::pluck('id');
+
         Variation::truncate();
 
-        foreach ($sizes as $size) {
-            foreach ($colors as $color) {
-                Variation::create([
-                    'size_id' => $size->id,
-                    'color_id' => $color->id,
-                ]);
+        $now = now();
+        $records = [];
+        foreach ($sizes as $sizeId) {
+            foreach ($colors as $colorId) {
+                $records[] = [
+                    'size_id' => $sizeId,
+                    'color_id' => $colorId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+                if (count($records) >= 1000) {
+                    Variation::insert($records);
+                    $records = [];
+                }
             }
+        }
+
+        if (!empty($records)) {
+            Variation::insert($records);
         }
 
         return response()->json(['message' => 'Variations generated successfully.']);

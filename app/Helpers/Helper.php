@@ -183,6 +183,13 @@ function check_permission($routeName)
         }
     }
 
+    // 4. Fallback for color/size/rack ajaxStore when user can create or edit products
+    if (in_array($routeName, ['color.ajaxStore', 'size.ajaxStore', 'rack.ajaxStore']) || (in_array($module, ['color', 'size', 'rack']) && $action === 'ajaxStore')) {
+        if (!empty($authUserPermissions['product']['create']) || !empty($authUserPermissions['product']['store']) || !empty($authUserPermissions['product']['edit']) || !empty($authUserPermissions['product']['update'])) {
+            return true;
+        }
+    }
+
     return false;
 }
 
