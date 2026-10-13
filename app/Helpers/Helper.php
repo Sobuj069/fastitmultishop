@@ -2633,10 +2633,15 @@ function recalculateInvoiceProfit($productId, $branchId)
 if (!function_exists('resolveProductAndVariationFromBarcode')) {
     function resolveProductAndVariationFromBarcode($scannedCode)
     {
-        $scannedCode = trim($scannedCode);
+        $cleanCode = preg_replace('/\s+/', '', trim((string)$scannedCode));
+        if ($cleanCode === '') {
+            return ['product_id' => null, 'variation_id' => null, 'product' => null];
+        }
 
         // 1. First try exact match on product barcode
-        $product = \App\Models\Product::where('barcode', $scannedCode)->first();
+        $product = \App\Models\Product::where('barcode', $cleanCode)
+            ->orWhere('barcode', trim((string)$scannedCode))
+            ->first();
         if ($product) {
             return [
                 'product_id'   => $product->id,
@@ -2645,19 +2650,21 @@ if (!function_exists('resolveProductAndVariationFromBarcode')) {
             ];
         }
 
-        // 2. Try to parse as concatenated barcode: product_barcode + variation_id
-        if (is_numeric($scannedCode) && strlen($scannedCode) >= 3) {
+        // 2. Try to parse as concatenated barcode: product_barcode + variation_id (variation_id suffix must be numeric)
+        if (strlen($cleanCode) >= 2) {
             $candidates = \App\Models\Product::whereNotNull('barcode')
+                ->where('barcode', '!=', '')
                 ->where('status', 1)
-                ->whereRaw('? LIKE CONCAT(barcode, "%")', [$scannedCode])
-                ->get(['id', 'barcode']);
+                ->whereRaw('? LIKE CONCAT(barcode, "%")', [$cleanCode])
+                ->orderByRaw('LENGTH(barcode) DESC')
+                ->get();
 
             foreach ($candidates as $candidate) {
                 $base = (string) $candidate->barcode;
-                if ($base === '' || strpos($scannedCode, $base) !== 0) {
+                if ($base === '' || stripos($cleanCode, $base) !== 0) {
                     continue;
                 }
-                $suffix = substr($scannedCode, strlen($base));
+                $suffix = substr($cleanCode, strlen($base));
                 if (!is_numeric($suffix) || $suffix === '') {
                     continue;
                 }
@@ -2672,6 +2679,18 @@ if (!function_exists('resolveProductAndVariationFromBarcode')) {
                         'product'      => $candidate,
                     ];
                 }
+            }
+        }
+
+        // 3. Fallback: Standalone variation ID if numeric
+        if (is_numeric($cleanCode)) {
+            $pv = \App\Models\ProductVariation::with('product')->find((int) $cleanCode);
+            if ($pv && $pv->product && $pv->product->status == 1) {
+                return [
+                    'product_id'   => $pv->product_id,
+                    'variation_id' => $pv->id,
+                    'product'      => $pv->product,
+                ];
             }
         }
 
