@@ -982,49 +982,66 @@ if (!function_exists('product_fake_stock_val')) {
 }
 
 if (!function_exists('product_purchase_unit_cost')) {
-    function product_purchase_unit_cost($product, $branchId = null)
+    function product_purchase_unit_cost($product, $branchId = null, $variationId = null)
     {
         if (!$product || $product->is_service == 1) {
             return 0;
         }
 
-        $factor = ($product->unit && $product->unit->related_value) ? (float)$product->unit->related_value : 1;
-        if ($factor <= 0) $factor = 1;
-
-        // 1. Check active remaining stock batches in PurchaseItem (FIFO / remaining stock batches)
-        $activeBatches = \App\Models\PurchaseItem::where('product_id', $product->id)
+        // 1. Check active remaining stock batches in PurchaseItem (FIFO: oldest batch with stock_qty > 0)
+        $activeBatchesQuery = \App\Models\PurchaseItem::where('product_id', $product->id)
             ->when($branchId, function($q) use ($branchId) {
                 return $q->where('branch_id', $branchId);
             })
-            ->where('stock_qty', '>', 0)
-            ->get();
+            ->where('stock_qty', '>', 0);
 
-        $activeStockSum = $activeBatches->sum('stock_qty');
-        if ($activeStockSum > 0) {
-            $activeVal = $activeBatches->sum(function($b) use ($factor) {
-                return (float)$b->stock_qty * ((float)$b->rate / $factor);
-            });
-            return $activeVal / $activeStockSum;
+        if ($variationId !== null && $variationId !== '') {
+            $activeBatchesQuery->where('product_variation_id', $variationId);
         }
 
-        // 2. If no active batches remaining, check weighted average of all purchases
-        $allPurchases = \App\Models\PurchaseItem::where('product_id', $product->id)
+        $firstBatch = $activeBatchesQuery->orderBy('date', 'asc')->orderBy('id', 'asc')->first();
+
+        if ($firstBatch && (float)$firstBatch->rate > 0) {
+            return (float) $firstBatch->rate;
+        }
+
+        // If variation had no active batches, check product-level active batches
+        if ($variationId !== null && $variationId !== '') {
+            $fallbackBatch = \App\Models\PurchaseItem::where('product_id', $product->id)
+                ->when($branchId, function($q) use ($branchId) {
+                    return $q->where('branch_id', $branchId);
+                })
+                ->where('stock_qty', '>', 0)
+                ->orderBy('date', 'asc')
+                ->orderBy('id', 'asc')
+                ->first();
+
+            if ($fallbackBatch && (float)$fallbackBatch->rate > 0) {
+                return (float) $fallbackBatch->rate;
+            }
+        }
+
+        // 2. If no active batches with remaining stock, fallback to the latest purchase rate
+        $latestPurQuery = \App\Models\PurchaseItem::where('product_id', $product->id)
             ->when($branchId, function($q) use ($branchId) {
                 return $q->where('branch_id', $branchId);
-            })
-            ->get();
+            });
 
-        $totalPurQty = $allPurchases->sum(function($item) use ($factor) {
-            return (float)$item->main_qty + (((float)($item->sub_qty ?? 0)) / $factor);
-        });
-        $totalPurSubtotal = $allPurchases->sum('subtotal');
+        if ($variationId !== null && $variationId !== '') {
+            $latestVarPur = (clone $latestPurQuery)->where('product_variation_id', $variationId)
+                ->orderBy('date', 'desc')->orderBy('id', 'desc')->first();
+            if ($latestVarPur && (float)$latestVarPur->rate > 0) {
+                return (float) $latestVarPur->rate;
+            }
+        }
 
-        if ($totalPurQty > 0 && $totalPurSubtotal > 0) {
-            return ($totalPurSubtotal / $totalPurQty) / $factor;
+        $latestPur = $latestPurQuery->orderBy('date', 'desc')->orderBy('id', 'desc')->first();
+        if ($latestPur && (float)$latestPur->rate > 0) {
+            return (float) $latestPur->rate;
         }
 
         // 3. Fallback to product table purchase_price
-        return ((float)$product->purchase_price) / $factor;
+        return (float) ($product->purchase_price ?? 0);
     }
 }
 

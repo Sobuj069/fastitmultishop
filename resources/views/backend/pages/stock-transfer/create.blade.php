@@ -527,8 +527,9 @@
 
             // Check if product with the same variation already exists
             let existingRow = $("#tbody tr").filter(function() {
-                return $(this).find("input[name='product_id[]']").val() == data.product.id &&
-                    $(this).find("select[name='variation_id[]']").val() == variation_code;
+                let rowVar = $(this).find("select[name='variation_id[]']").val() || $(this).find("input[name='variation_id[]']").val() || '';
+                let targetVar = (variation_code !== null && variation_code !== undefined && variation_code !== '') ? variation_code.toString() : '';
+                return $(this).find("input[name='product_id[]']").val() == data.product.id && rowVar == targetVar;
             });
 
             if (existingRow.length > 0) {
@@ -661,7 +662,7 @@
                         return false;
                     }
 
-                    addProductToCard(fullData);
+                    addProductToCard(fullData, null, target.matched_variation_id || null);
 
                     if ($input && $input.length) {
                         $input.val('').focus();
@@ -754,7 +755,8 @@
                                 label: item.name + " (" + (item.purchase_price || 0) + " {{ empty(get_setting('com_currency')) ? 'TK' : get_setting('com_currency') }}) [Stock: " + stockDisplay + "] - " + (item.barcode || ''),
                                 value: item.name + " " + (item.barcode || ''),
                                 price: item.purchase_price,
-                                barcode: item.barcode || ''
+                                barcode: item.barcode || '',
+                                matched_variation_id: item.matched_variation_id || null
                             };
                         }));
                     } else {
@@ -785,7 +787,7 @@
                         return false;
                     }
 
-                    addProductToCard(data);
+                    addProductToCard(data, null, ui.item.matched_variation_id || null);
                     if ($input && $input.length) {
                         $input.focus();
                     }
@@ -872,15 +874,24 @@
                 displayStock = data.stock_qty || 0;
             }
 
+            let purchasePrice = parseFloat(data.product.purchase_price) || 0;
+            if (variation_code && data.variations && data.variations.length > 0) {
+                let matchedVar = data.variations.find(v => parseInt(v.id) === parseInt(variation_code));
+                if (matchedVar && matchedVar.purchase_price !== undefined && matchedVar.purchase_price !== null && matchedVar.purchase_price !== '') {
+                    purchasePrice = parseFloat(matchedVar.purchase_price) || purchasePrice;
+                }
+            }
+
             if (data.variations && data.variations.length > 0) {
                 variation_data += `<input type="text" class="has_size" data-has-size="true" hidden>
                 <select name="variation_id[]" class="form-control size" required>
-                <option value="">{{ __('Select Variation *') }}</option>`;
+                <option value="" data-price="${data.product.purchase_price || 0}">{{ __('Select Variation *') }}</option>`;
 
                 $.each(data.variations, function(idx, value) {
                     if (parseFloat(value.stock) <= 0) return;
                     let selected = (variation_code && parseInt(variation_code) === value.id) ? "selected" : "";
-                    variation_data += `<option stock='${value.stock}' value='${value.id}' ${selected}>
+                    let varPrice = (value.purchase_price !== undefined && value.purchase_price !== null && value.purchase_price !== '') ? value.purchase_price : (data.product.purchase_price || 0);
+                    variation_data += `<option stock='${value.stock}' value='${value.id}' data-price='${varPrice}' ${selected}>
                     ${value.size || ''} - ${value.color || ''} [Stock: ${value.stock}]</option>`;
                 });
 
@@ -890,7 +901,6 @@
                 <input type="hidden" name="variation_id[]">`;
             }
 
-            let purchasePrice = parseFloat(data.product.purchase_price) || 0;
             let initialSubtotal = calculate_sub_total(
                 1,
                 0,
@@ -1098,6 +1108,12 @@
         });
 
         $(document).on('change', 'select[name="variation_id[]"]', function() {
+            let row = $(this).closest('tr');
+            let selectedOpt = $(this).find('option:selected');
+            let newPrice = selectedOpt.attr('data-price');
+            if (newPrice !== undefined && newPrice !== null && newPrice !== '') {
+                row.find('.rate').val(parseFloat(newPrice) || 0);
+            }
             handle_change($(this));
         });
 

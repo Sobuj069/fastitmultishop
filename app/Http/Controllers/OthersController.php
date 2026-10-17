@@ -195,6 +195,9 @@ class OthersController extends Controller
             if ($product) {
                 $product->stock_qty_text       = ($product->is_service == 1) ? __('Service Item') : product_stock($product, $activeBranchId);
                 $product->stock_qty            = ($product->is_service == 1) ? 999999 : (float) product_fake_stock_val($product, $activeBranchId);
+                if (function_exists('product_purchase_unit_cost')) {
+                    $product->purchase_price   = round(product_purchase_unit_cost($product, $activeBranchId, $resolved['variation_id']), 2);
+                }
                 $product->matched_variation_id = $resolved['variation_id'];
                 return response()->json([$product]);
             }
@@ -268,6 +271,9 @@ class OthersController extends Controller
                 ->map(function ($product) use ($activeBranchId) {
                     $product->stock_qty_text = ($product->is_service == 1) ? __('Service Item') : product_stock($product, $activeBranchId);
                     $product->stock_qty = ($product->is_service == 1) ? 999999 : (float) product_fake_stock_val($product, $activeBranchId);
+                    if (function_exists('product_purchase_unit_cost')) {
+                        $product->purchase_price = round(product_purchase_unit_cost($product, $activeBranchId), 2);
+                    }
                     return $product;
                 });
         }
@@ -477,6 +483,10 @@ class OthersController extends Controller
         $data['stock_qty'] = product_stock_check($data['product'], $activeBranchId);
         $data['pure_stock'] = product_fake_stock_val($data['product'], $activeBranchId);
 
+        if (function_exists('product_purchase_unit_cost')) {
+            $data['product']->purchase_price = round(product_purchase_unit_cost($data['product'], $activeBranchId), 2);
+        }
+
         if (env('APP_SC') == 'yes') {
             // Variation গুলো size name অনুযায়ী sort হবে
             $variations = $data['product']->product_variations()
@@ -489,12 +499,17 @@ class OthersController extends Controller
             $dataa = [];
 
             foreach ($variations as $variation) {
+                $varPurchasePrice = function_exists('product_purchase_unit_cost')
+                    ? round(product_purchase_unit_cost($data['product'], $activeBranchId, $variation->id), 2)
+                    : (float) $data['product']->purchase_price;
+
                 $dataa[] = [
-                    'id' => $variation->id,
-                    'name' => $variation->product->name,
-                    'size' => $variation->size->size ?? '',
-                    'color' => $variation->color->color ?? '',
-                    'stock' => variation_stock($variation->id, $activeBranchId),
+                    'id'             => $variation->id,
+                    'name'           => $variation->product->name,
+                    'size'           => $variation->size->size ?? '',
+                    'color'          => $variation->color->color ?? '',
+                    'stock'          => variation_stock($variation->id, $activeBranchId),
+                    'purchase_price' => $varPurchasePrice,
                 ];
             }
 
