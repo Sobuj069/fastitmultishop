@@ -92,8 +92,14 @@ class OthersController extends Controller
                 ->where('is_service', 0)
                 ->first();
             if ($product) {
-                $product->stock_qty_text    = product_stock($product, $activeBranchId);
-                $product->stock_qty         = (float) product_fake_stock_val($product, $activeBranchId);
+                if ($resolved['variation_id']) {
+                    $varStock = variation_stock($resolved['variation_id'], $activeBranchId);
+                    $product->stock_qty_text    = $varStock . ' ' . ($product->unit->name ?? 'pcs');
+                    $product->stock_qty         = (float) $varStock;
+                } else {
+                    $product->stock_qty_text    = product_stock($product, $activeBranchId);
+                    $product->stock_qty         = (float) product_fake_stock_val($product, $activeBranchId);
+                }
                 $product->matched_variation_id = $resolved['variation_id'];
                 return response()->json([$product]);
             }
@@ -193,8 +199,14 @@ class OthersController extends Controller
                 ->where('status', 1)
                 ->first();
             if ($product) {
-                $product->stock_qty_text       = ($product->is_service == 1) ? __('Service Item') : product_stock($product, $activeBranchId);
-                $product->stock_qty            = ($product->is_service == 1) ? 999999 : (float) product_fake_stock_val($product, $activeBranchId);
+                if ($resolved['variation_id']) {
+                    $varStock = variation_stock($resolved['variation_id'], $activeBranchId);
+                    $product->stock_qty_text       = ($product->is_service == 1) ? __('Service Item') : ($varStock . ' ' . ($product->unit->name ?? 'pcs'));
+                    $product->stock_qty            = ($product->is_service == 1) ? 999999 : (float) $varStock;
+                } else {
+                    $product->stock_qty_text       = ($product->is_service == 1) ? __('Service Item') : product_stock($product, $activeBranchId);
+                    $product->stock_qty            = ($product->is_service == 1) ? 999999 : (float) product_fake_stock_val($product, $activeBranchId);
+                }
                 if (function_exists('product_purchase_unit_cost')) {
                     $product->purchase_price   = round(product_purchase_unit_cost($product, $activeBranchId, $resolved['variation_id']), 2);
                 }

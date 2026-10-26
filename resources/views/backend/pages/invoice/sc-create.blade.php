@@ -5396,8 +5396,8 @@
             if (data.product.imei != 1) {
                 existingRow = $("#tbody tr").filter(function() {
                     let rowVal = $(this).find("[name='variation_id[]']").val() || "";
-                    let searchVal = variation_code || "";
-                    return $(this).find("input[name='product_id[]']").val() == data.product.id && rowVal == searchVal;
+                    let searchVal = (variation_code !== null && variation_code !== undefined && variation_code !== '') ? String(variation_code) : "";
+                    return $(this).find("input[name='product_id[]']").val() == data.product.id && String(rowVal) === searchVal;
                 });
             } else {
                 existingRow = $("#tbody tr").filter(function() {
@@ -5625,6 +5625,13 @@
                 tr.find('.sub_qty, .sub_qty_input').val(sub_qty);
                 tr.find('.quantity-input').val(has_sub_unit ? (main_qty + (sub_qty / related_by)) : main_qty);
 
+                if (variation_code) {
+                    let varSelect = tr.find('select[name="variation_id[]"]');
+                    if (varSelect.length > 0) {
+                        varSelect.val(variation_code).trigger('change');
+                    }
+                }
+
                 update_row_discount_and_subtotal(tr);
                 estimatedAmount();
             }
@@ -5842,7 +5849,7 @@
 
                     let targetVarStock = null;
                     if (targetVariationId && fullData.variations && fullData.variations.length > 0) {
-                        let matchedVar = fullData.variations.find(v => v.id == targetVariationId);
+                        let matchedVar = fullData.variations.find(v => String(v.id) === String(targetVariationId));
                         if (matchedVar) {
                             targetVarStock = parseFloat(matchedVar.stock) || 0;
                         }
@@ -6138,7 +6145,7 @@
 
                     let varStock = null;
                     if (variation_code && data.variations && data.variations.length > 0) {
-                        let matchedVar = data.variations.find(v => v.id == variation_code);
+                        let matchedVar = data.variations.find(v => String(v.id) === String(variation_code));
                         if (matchedVar) {
                             varStock = parseFloat(matchedVar.stock) || 0;
                         }

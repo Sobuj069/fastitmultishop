@@ -2655,10 +2655,15 @@ if (!function_exists('resolveProductAndVariationFromBarcode')) {
             return ['product_id' => null, 'variation_id' => null, 'product' => null];
         }
 
-        // 1. First try exact match on product barcode
-        $product = \App\Models\Product::where('barcode', $cleanCode)
-            ->orWhere('barcode', trim((string)$scannedCode))
+        // 1. First try exact match on product barcode (ignoring spaces and case-insensitive)
+        $product = \App\Models\Product::where('status', 1)
+            ->where(function($q) use ($cleanCode, $scannedCode) {
+                $q->where('barcode', $cleanCode)
+                  ->orWhere('barcode', trim((string)$scannedCode))
+                  ->orWhereRaw('REPLACE(barcode, " ", "") = ?', [$cleanCode]);
+            })
             ->first();
+
         if ($product) {
             return [
                 'product_id'   => $product->id,
@@ -2672,34 +2677,69 @@ if (!function_exists('resolveProductAndVariationFromBarcode')) {
             $candidates = \App\Models\Product::whereNotNull('barcode')
                 ->where('barcode', '!=', '')
                 ->where('status', 1)
-                ->whereRaw('? LIKE CONCAT(barcode, "%")', [$cleanCode])
-                ->orderByRaw('LENGTH(barcode) DESC')
+                ->where(function($q) use ($cleanCode) {
+                    $q->whereRaw('? LIKE CONCAT(REPLACE(barcode, " ", ""), "%")', [$cleanCode])
+                      ->orWhereRaw('? LIKE CONCAT(barcode, "%")', [$cleanCode]);
+                })
+                ->orderByRaw('LENGTH(REPLACE(barcode, " ", "")) DESC')
                 ->get();
 
             foreach ($candidates as $candidate) {
-                $base = (string) $candidate->barcode;
-                if ($base === '' || stripos($cleanCode, $base) !== 0) {
-                    continue;
-                }
-                $suffix = substr($cleanCode, strlen($base));
-                if (!is_numeric($suffix) || $suffix === '') {
-                    continue;
-                }
-                $variationId = (int) $suffix;
-                $variationExists = \App\Models\ProductVariation::where('id', $variationId)
-                    ->where('product_id', $candidate->id)
-                    ->exists();
-                if ($variationExists) {
-                    return [
-                        'product_id'   => $candidate->id,
-                        'variation_id' => $variationId,
-                        'product'      => $candidate,
-                    ];
+                $rawBase = (string) $candidate->barcode;
+                $cleanBase = preg_replace('/\s+/', '', $rawBase);
+
+                if ($cleanBase !== '' && stripos($cleanCode, $cleanBase) === 0) {
+                    $suffix = substr($cleanCode, strlen($cleanBase));
+                    if (is_numeric($suffix) && $suffix !== '') {
+                        $variationId = (int) $suffix;
+                        $variationExists = \App\Models\ProductVariation::where('id', $variationId)
+                            ->where('product_id', $candidate->id)
+                            ->exists();
+                        if ($variationExists) {
+                            return [
+                                'product_id'   => $candidate->id,
+                                'variation_id' => $variationId,
+                                'product'      => $candidate,
+                            ];
+                        }
+                    }
                 }
             }
         }
 
-        // 3. Fallback: Standalone variation ID if numeric
+        // 3. Fallback: Check if barcode prefix has non-digits in DB (e.g. "P 680" in DB vs "680619" scanned)
+        if (strlen($cleanCode) >= 2) {
+            $allNumericCode = preg_replace('/[^0-9]/', '', $cleanCode);
+            if ($allNumericCode !== '') {
+                $candidates = \App\Models\Product::whereNotNull('barcode')
+                    ->where('status', 1)
+                    ->whereRaw('REGEXP_REPLACE(barcode, "[^0-9]", "") != ""')
+                    ->whereRaw('? LIKE CONCAT(REGEXP_REPLACE(barcode, "[^0-9]", ""), "%")', [$allNumericCode])
+                    ->get();
+
+                foreach ($candidates as $candidate) {
+                    $numericBase = preg_replace('/[^0-9]/', '', (string)$candidate->barcode);
+                    if ($numericBase !== '' && strpos($allNumericCode, $numericBase) === 0) {
+                        $suffix = substr($allNumericCode, strlen($numericBase));
+                        if (is_numeric($suffix) && $suffix !== '') {
+                            $variationId = (int) $suffix;
+                            $variationExists = \App\Models\ProductVariation::where('id', $variationId)
+                                ->where('product_id', $candidate->id)
+                                ->exists();
+                            if ($variationExists) {
+                                return [
+                                    'product_id'   => $candidate->id,
+                                    'variation_id' => $variationId,
+                                    'product'      => $candidate,
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Fallback: Standalone variation ID if numeric
         if (is_numeric($cleanCode)) {
             $pv = \App\Models\ProductVariation::with('product')->find((int) $cleanCode);
             if ($pv && $pv->product && $pv->product->status == 1) {
