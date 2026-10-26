@@ -31,6 +31,11 @@
                     <span id="digital-clock" class="text-[12px] font-black text-slate-700 dark:text-slate-300 tracking-wider">00:00:00 AM</span>
                 </div>
 
+                <button type="button" data-toggle="modal" data-target="#paymentQrModal" class="flex items-center gap-1.5 px-3 h-[38px] rounded-full transition-all duration-300 bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-sm hover:shadow hover:-translate-y-[1.5px] border border-blue-500/20" title="{{ __('Payment QR Code (Bangla QR)') }}">
+                    <i class="fa-solid fa-qrcode text-xs"></i>
+                    <span class="text-[11px] font-black uppercase tracking-wider hidden lg:inline">{{ __('Pay QR') }}</span>
+                </button>
+
                 <button id="calculator-toggle" class="w-[38px] h-[38px] flex items-center justify-center rounded-full transition-all duration-300 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-500 dark:hover:text-blue-400 border border-transparent hover:border-blue-500/10 hover:-translate-y-[1.5px]" title="Quick Calculator">
                     <i class="fa-solid fa-calculator text-xs"></i>
                 </button>
@@ -61,7 +66,11 @@
                             <span id="digital-clock-mobile" class="text-[11px] font-black text-blue-500">00:00:00</span>
                         </div>
                         
-                        <div class="grid grid-cols-4 gap-2">
+                        <div class="grid grid-cols-5 gap-1.5">
+                            <button type="button" data-toggle="modal" data-target="#paymentQrModal" class="flex flex-col items-center justify-center gap-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30 transition-all active:scale-95 text-blue-600 dark:text-blue-400" title="{{ __('Pay QR') }}">
+                                <i class="fa-solid fa-qrcode text-sm"></i>
+                                <span class="text-[9px] font-bold">{{ __('QR') }}</span>
+                            </button>
                             <button id="theme-toggle-mobile" class="flex flex-col items-center justify-center gap-1.5 p-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 transition-all active:scale-95">
                                 <i class="fa-solid fa-moon text-slate-500"></i>
                                 <span class="text-[9px] font-bold text-slate-600 dark:text-slate-400">{{ __('Theme') }}</span>
@@ -219,6 +228,7 @@
 </header>
 
 @include('backend.layouts.includes.calculator')
+@include('backend.layouts.includes.payment-qr-modal')
 @push('js')
 <script>
     // Digital Clock

@@ -367,6 +367,16 @@
             <span class="sidebar-label">{{ __('Dashboard') }}</span>
         </a>
 
+        {{-- Payment Section (Bangla QR Modal) --}}
+        <a href="javascript:void(0);" data-toggle="modal" data-target="#paymentQrModal"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14.5px] font-medium transition-all duration-200 mb-0.5 text-slate-300 hover:bg-blue-600/20 hover:text-white border border-transparent hover:border-blue-500/30 group">
+            <span class="flex-shrink-0 w-[22px] h-[22px] text-blue-400 group-hover:scale-110 transition-transform flex items-center justify-center">
+                <i class="fa-solid fa-qrcode text-base"></i>
+            </span>
+            <span class="sidebar-label flex-1 font-semibold text-slate-200 group-hover:text-blue-300">{{ __('Payment Section') }}</span>
+            <span class="sidebar-label px-2 py-0.5 text-[10px] font-black bg-blue-500/20 text-blue-400 rounded-md border border-blue-500/30">QR</span>
+        </a>
+
         {{-- ===== SALE & PURCHASE ===== --}}
         <div class="sidebar-category-label px-3 pt-3 pb-1 mt-2 border-t border-slate-700/50">
             <p class="sidebar-label text-xs font-bold uppercase tracking-wider text-orange-400/80">{{ __('Sale & Purchase') }}</p>
