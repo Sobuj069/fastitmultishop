@@ -32,14 +32,10 @@
                 </div>
 
                 <button type="button" data-toggle="modal" data-target="#paymentQrModal" class="w-[38px] h-[38px] flex items-center justify-center rounded-full transition-all duration-300 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-500 dark:hover:text-blue-400 border border-transparent hover:border-blue-500/10 hover:-translate-y-[1.5px]" title="{{ __('Payment QR Code (Bangla QR)') }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="14" width="7" height="7"></rect>
-                        <rect x="3" y="14" width="7" height="7"></rect>
-                        <line x1="10" y1="7" x2="10" y2="7.01"></line>
-                        <line x1="14" y1="10" x2="14" y2="10.01"></line>
-                        <line x1="10" y1="14" x2="10" y2="14.01"></line>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M2 2h2v2H2z"/>
+                        <path d="M6 0v6H0V0zM1 1v4h4V1zm7 0h2v1H8zm3 0h1v2h-1zm2 1h1v1h-1zm2 0h1v1h-1zM9 3h1v1H9zm1 1h1v1h-1zm2 0h1v1h-1zm3 0h1v1h-1zm-4 1h1v1h-1zm2 0h1v1h-1zm-6 2h1v1H7zm1 0h1v1H8zm1 0h1v1H9zm3 0h1v1h-1zm1 0h1v1h-1zm2 0h1v1h-1zm-9 1h1v1H7zm1 0h1v1H8zm2 0h1v1h-1zm2 0h1v1h-1zm3 0h1v1h-1zM0 10v6h6v-6zm1 1v4h4v-4zm1 1h2v2H2zm8-2h1v1h-1zm1 0h1v2h-1zm3 0h2v1h-2zm-2 1h1v1h-1zm3 0h1v1h-1zm-4 1h2v1h-2zm3 0h1v1h-1zm-2 1h1v1h-1zm2 0h2v1h-2zm-3 1h1v1h-1zm1 0h1v1h-1zm2 0h1v2h-1zm-3 1h2v1h-2zm-8-3v2h2v-2zm1-7v2h2V4zm-7 6v2h2v-2zm10-7h2v2h-2zm-1 6h2v2h-2zm-6 0h2v2H4zm1 7h2v2H5zm10-1h1v1h-1zm-3-1h1v1h-1zm-1 1h1v1h-1zm1 1h1v1h-1zm2-1h1v1h-1zm-3-3h1v1h-1zm-1 1h1v1h-1zm3-1h1v1h-1z"/>
+                        <path d="M10 0v6h6V0zm5 1v4h-4V1zm-3 1h2v2h-2z"/>
                     </svg>
                 </button>
 
@@ -75,11 +71,10 @@
                         
                         <div class="grid grid-cols-5 gap-1.5">
                             <button type="button" data-toggle="modal" data-target="#paymentQrModal" class="flex flex-col items-center justify-center gap-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30 transition-all active:scale-95 text-blue-600 dark:text-blue-400" title="{{ __('Pay QR') }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="3" y="3" width="7" height="7"></rect>
-                                    <rect x="14" y="3" width="7" height="7"></rect>
-                                    <rect x="14" y="14" width="7" height="7"></rect>
-                                    <rect x="3" y="14" width="7" height="7"></rect>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M2 2h2v2H2z"/>
+                                    <path d="M6 0v6H0V0zM1 1v4h4V1zm7 0h2v1H8zm3 0h1v2h-1zm2 1h1v1h-1zm2 0h1v1h-1zM9 3h1v1H9zm1 1h1v1h-1zm2 0h1v1h-1zm3 0h1v1h-1zm-4 1h1v1h-1zm2 0h1v1h-1zm-6 2h1v1H7zm1 0h1v1H8zm1 0h1v1H9zm3 0h1v1h-1zm1 0h1v1h-1zm2 0h1v1h-1zm-9 1h1v1H7zm1 0h1v1H8zm2 0h1v1h-1zm2 0h1v1h-1zm3 0h1v1h-1zM0 10v6h6v-6zm1 1v4h4v-4zm1 1h2v2H2zm8-2h1v1h-1zm1 0h1v2h-1zm3 0h2v1h-2zm-2 1h1v1h-1zm3 0h1v1h-1zm-4 1h2v1h-2zm3 0h1v1h-1zm-2 1h1v1h-1zm2 0h2v1h-2zm-3 1h1v1h-1zm1 0h1v1h-1zm2 0h1v2h-1zm-3 1h2v1h-2zm-8-3v2h2v-2zm1-7v2h2V4zm-7 6v2h2v-2zm10-7h2v2h-2zm-1 6h2v2h-2zm-6 0h2v2H4zm1 7h2v2H5zm10-1h1v1h-1zm-3-1h1v1h-1zm-1 1h1v1h-1zm1 1h1v1h-1zm2-1h1v1h-1zm-3-3h1v1h-1zm-1 1h1v1h-1zm3-1h1v1h-1z"/>
+                                    <path d="M10 0v6h6V0zm5 1v4h-4V1zm-3 1h2v2h-2z"/>
                                 </svg>
                                 <span class="text-[9px] font-bold">{{ __('QR') }}</span>
                             </button>

@@ -371,14 +371,10 @@
         <a href="javascript:void(0);" data-toggle="modal" data-target="#paymentQrModal"
             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14.5px] font-medium transition-all duration-200 mb-0.5 text-slate-300 hover:bg-blue-600/20 hover:text-white border border-transparent hover:border-blue-500/30 group">
             <span class="flex-shrink-0 w-[22px] h-[22px] flex items-center justify-center text-slate-300 group-hover:text-blue-400 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="7" height="7"></rect>
-                    <rect x="14" y="3" width="7" height="7"></rect>
-                    <rect x="14" y="14" width="7" height="7"></rect>
-                    <rect x="3" y="14" width="7" height="7"></rect>
-                    <line x1="10" y1="7" x2="10" y2="7.01"></line>
-                    <line x1="14" y1="10" x2="14" y2="10.01"></line>
-                    <line x1="10" y1="14" x2="10" y2="14.01"></line>
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M2 2h2v2H2z"/>
+                    <path d="M6 0v6H0V0zM1 1v4h4V1zm7 0h2v1H8zm3 0h1v2h-1zm2 1h1v1h-1zm2 0h1v1h-1zM9 3h1v1H9zm1 1h1v1h-1zm2 0h1v1h-1zm3 0h1v1h-1zm-4 1h1v1h-1zm2 0h1v1h-1zm-6 2h1v1H7zm1 0h1v1H8zm1 0h1v1H9zm3 0h1v1h-1zm1 0h1v1h-1zm2 0h1v1h-1zm-9 1h1v1H7zm1 0h1v1H8zm2 0h1v1h-1zm2 0h1v1h-1zm3 0h1v1h-1zM0 10v6h6v-6zm1 1v4h4v-4zm1 1h2v2H2zm8-2h1v1h-1zm1 0h1v2h-1zm3 0h2v1h-2zm-2 1h1v1h-1zm3 0h1v1h-1zm-4 1h2v1h-2zm3 0h1v1h-1zm-2 1h1v1h-1zm2 0h2v1h-2zm-3 1h1v1h-1zm1 0h1v1h-1zm2 0h1v2h-1zm-3 1h2v1h-2zm-8-3v2h2v-2zm1-7v2h2V4zm-7 6v2h2v-2zm10-7h2v2h-2zm-1 6h2v2h-2zm-6 0h2v2H4zm1 7h2v2H5zm10-1h1v1h-1zm-3-1h1v1h-1zm-1 1h1v1h-1zm1 1h1v1h-1zm2-1h1v1h-1zm-3-3h1v1h-1zm-1 1h1v1h-1zm3-1h1v1h-1z"/>
+                    <path d="M10 0v6h6V0zm5 1v4h-4V1zm-3 1h2v2h-2z"/>
                 </svg>
             </span>
             <span class="sidebar-label flex-1 font-semibold text-slate-200 group-hover:text-blue-300">{{ __('Payment Section') }}</span>
