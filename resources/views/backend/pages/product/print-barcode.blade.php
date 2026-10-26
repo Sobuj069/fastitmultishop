@@ -104,6 +104,7 @@
         .product-rate .final-price {
             color: #000;
             font-size: 13px;
+            display: block;
         }
 
         .product-vat {
@@ -157,7 +158,19 @@
                 if (!empty($item['variation'])) {
                     $full_code .= '' . $item['variation']->id;
                 }
-                $discount = $item['product']->discount ?? 0;
+                $discount = (float)($item['product']->discount ?? 0);
+                $finalPrice = (float)($item['product']->selling_price ?? 0);
+                
+                // Regular Sale Price before discount (e.g. 2150.00)
+                if (!empty($item['product']->dis_selling_price) && (float)$item['product']->dis_selling_price > $finalPrice) {
+                    $regularPrice = (float)$item['product']->dis_selling_price;
+                } elseif ($discount > 0) {
+                    $regularPrice = $finalPrice + $discount;
+                } else {
+                    $regularPrice = $finalPrice;
+                }
+                
+                $currency = empty(get_setting('com_currency')) ? 'BDT' : get_setting('com_currency');
             @endphp
             <div class="barcode">
                 @if ($settings['b_company'] ?? true)
@@ -186,14 +199,14 @@
                 
                 @if ($settings['b_price'] ?? true)
                     <div class="product-rate">
-                        @if ($discount > 0)
+                        @if ($discount > 0 && $regularPrice > $finalPrice)
                             <strong>
-                                Price: <span class="discount-price">{{ number_format($item['product']->selling_price, 2) }}  {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</span>
-                                <span class="final-price">{{ number_format($item['product']->selling_price - $discount, 2) }}  {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}</span>
+                                Price: <span class="discount-price">{{ number_format($regularPrice, 2) }} {{ $currency }}</span>
+                                <span class="final-price">{{ number_format($finalPrice, 2) }} {{ $currency }}</span>
                             </strong>
                         @else
                             <strong>
-                                Price: {{ number_format($item['product']->selling_price, 2) }} {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}
+                                Price: {{ number_format($finalPrice, 2) }} {{ $currency }}
                             </strong>
                         @endif
                     </div>

@@ -311,6 +311,11 @@
                 const pro_barcode = "{{ get_setting('pro_barcode') }}" || 'single';
                 const company = "{{ $com?->value ?? get_setting('com_name') }}";
 
+                const numericPrice = parseFloat(price) || 0;
+                const numericDisPrice = parseFloat(dis_price) || 0;
+                const numericDiscount = parseFloat(discount) || 0;
+                const regularPrice = (numericDisPrice > numericPrice) ? numericDisPrice : (numericPrice + numericDiscount);
+
                 const formattedPrice = new Intl.NumberFormat('en-US', {
                     useGrouping: true,
                     minimumFractionDigits: 2
@@ -318,11 +323,11 @@
                 const formattedDisPrice = new Intl.NumberFormat('en-US', {
                     useGrouping: true,
                     minimumFractionDigits: 2
-                }).format(dis_price);
+                }).format(regularPrice);
                 
                 let priceHtml = '';
 
-                if (discount > 0) {
+                if (numericDiscount > 0 && regularPrice > numericPrice) {
                 
                     priceHtml = `
                     <p style="margin-bottom:2px; line-height:9px; margin-top:5px; font-size: 12px; color:black;">
