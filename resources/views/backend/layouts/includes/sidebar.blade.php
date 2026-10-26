@@ -370,8 +370,16 @@
         {{-- Payment Section (Bangla QR Modal) --}}
         <a href="javascript:void(0);" data-toggle="modal" data-target="#paymentQrModal"
             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14.5px] font-medium transition-all duration-200 mb-0.5 text-slate-300 hover:bg-blue-600/20 hover:text-white border border-transparent hover:border-blue-500/30 group">
-            <span class="flex-shrink-0 w-[22px] h-[22px] text-blue-400 group-hover:scale-110 transition-transform flex items-center justify-center">
-                <i class="fa-solid fa-qrcode text-base"></i>
+            <span class="flex-shrink-0 w-[22px] h-[22px] flex items-center justify-center text-slate-300 group-hover:text-blue-400 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                    <line x1="10" y1="7" x2="10" y2="7.01"></line>
+                    <line x1="14" y1="10" x2="14" y2="10.01"></line>
+                    <line x1="10" y1="14" x2="10" y2="14.01"></line>
+                </svg>
             </span>
             <span class="sidebar-label flex-1 font-semibold text-slate-200 group-hover:text-blue-300">{{ __('Payment Section') }}</span>
             <span class="sidebar-label px-2 py-0.5 text-[10px] font-black bg-blue-500/20 text-blue-400 rounded-md border border-blue-500/30">QR</span>

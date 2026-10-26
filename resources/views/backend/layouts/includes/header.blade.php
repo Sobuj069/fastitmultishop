@@ -31,9 +31,16 @@
                     <span id="digital-clock" class="text-[12px] font-black text-slate-700 dark:text-slate-300 tracking-wider">00:00:00 AM</span>
                 </div>
 
-                <button type="button" data-toggle="modal" data-target="#paymentQrModal" class="flex items-center gap-1.5 px-3 h-[38px] rounded-full transition-all duration-300 bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-sm hover:shadow hover:-translate-y-[1.5px] border border-blue-500/20" title="{{ __('Payment QR Code (Bangla QR)') }}">
-                    <i class="fa-solid fa-qrcode text-xs"></i>
-                    <span class="text-[11px] font-black uppercase tracking-wider hidden lg:inline">{{ __('Pay QR') }}</span>
+                <button type="button" data-toggle="modal" data-target="#paymentQrModal" class="w-[38px] h-[38px] flex items-center justify-center rounded-full transition-all duration-300 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-500 dark:hover:text-blue-400 border border-transparent hover:border-blue-500/10 hover:-translate-y-[1.5px]" title="{{ __('Payment QR Code (Bangla QR)') }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                        <line x1="10" y1="7" x2="10" y2="7.01"></line>
+                        <line x1="14" y1="10" x2="14" y2="10.01"></line>
+                        <line x1="10" y1="14" x2="10" y2="14.01"></line>
+                    </svg>
                 </button>
 
                 <button id="calculator-toggle" class="w-[38px] h-[38px] flex items-center justify-center rounded-full transition-all duration-300 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-500 dark:hover:text-blue-400 border border-transparent hover:border-blue-500/10 hover:-translate-y-[1.5px]" title="Quick Calculator">
@@ -68,7 +75,12 @@
                         
                         <div class="grid grid-cols-5 gap-1.5">
                             <button type="button" data-toggle="modal" data-target="#paymentQrModal" class="flex flex-col items-center justify-center gap-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30 transition-all active:scale-95 text-blue-600 dark:text-blue-400" title="{{ __('Pay QR') }}">
-                                <i class="fa-solid fa-qrcode text-sm"></i>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="14" width="7" height="7"></rect>
+                                    <rect x="3" y="14" width="7" height="7"></rect>
+                                </svg>
                                 <span class="text-[9px] font-bold">{{ __('QR') }}</span>
                             </button>
                             <button id="theme-toggle-mobile" class="flex flex-col items-center justify-center gap-1.5 p-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 transition-all active:scale-95">
