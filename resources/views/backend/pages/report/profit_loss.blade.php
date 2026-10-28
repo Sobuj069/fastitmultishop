@@ -64,9 +64,11 @@
                                 <thead>
                                     <tr class="header_bg">
                                         <th class="header_style_left">{{ __('Month') }}</th>
-                                        <th>{{ __('Sales') }}</th>
+                                        <th>{{ __('Sales (After Return)') }}</th>
+                                        <th>{{ __('Discount') }}</th>
+                                        <th>{{ __('Net Sale') }}</th>
                                         <th>{{ __('Cost of Goods Sold') }}</th>
-                                        <th>{{ __('Gross Profit') }} </th>
+                                        <th>{{ __('Gross Profit') }}</th>
                                         <th>{{ __('Expenses') }}</th>
                                         <th class="header_style_right">{{ __('Net Profit') }}</th>
                                     </tr>
@@ -85,6 +87,8 @@
                                                     $grossSale = App\Models\InvoiceItem::getFakeSum(App\Models\InvoiceItem::where('branch_id', $filterBranchId)->whereMonth('date', $mVal)->whereYear('date', $yVal), 'inv_subtotal');
                                                     $returnSale = App\Models\ReturnItem::where('branch_id', $filterBranchId)->whereMonth('date', $mVal)->whereYear('date', $yVal)->sum('subtotal');
                                                     $sale_amount = max(0, $grossSale - $returnSale);
+                                                    $discount = (float) App\Models\Invoice::getFakeSum(App\Models\Invoice::where('branch_id', $filterBranchId)->whereMonth('date', $mVal)->whereYear('date', $yVal), 'discount_amount');
+                                                    $net_sale = max(0, $sale_amount - $discount);
 
                                                     $grossPur = App\Models\InvoiceItem::getFakeSum(App\Models\InvoiceItem::where('branch_id', $filterBranchId)->whereMonth('date', $mVal)->whereYear('date', $yVal), 'pur_subtotal');
                                                     $returnPur = App\Models\ReturnItem::where('branch_id', $filterBranchId)->whereMonth('date', $mVal)->whereYear('date', $yVal)->sum('pur_subtotal');
@@ -98,6 +102,8 @@
                                                     $grossSale = App\Models\InvoiceItem::getFakeSum(App\Models\InvoiceItem::whereMonth('date', $mVal)->whereYear('date', $yVal), 'inv_subtotal');
                                                     $returnSale = App\Models\ReturnItem::whereMonth('date', $mVal)->whereYear('date', $yVal)->sum('subtotal');
                                                     $sale_amount = max(0, $grossSale - $returnSale);
+                                                    $discount = (float) App\Models\Invoice::getFakeSum(App\Models\Invoice::whereMonth('date', $mVal)->whereYear('date', $yVal), 'discount_amount');
+                                                    $net_sale = max(0, $sale_amount - $discount);
 
                                                     $grossPur = App\Models\InvoiceItem::getFakeSum(App\Models\InvoiceItem::whereMonth('date', $mVal)->whereYear('date', $yVal), 'pur_subtotal');
                                                     $returnPur = App\Models\ReturnItem::whereMonth('date', $mVal)->whereYear('date', $yVal)->sum('pur_subtotal');
@@ -111,6 +117,8 @@
                                                 $grossSale = App\Models\InvoiceItem::getFakeSum(App\Models\InvoiceItem::where('branch_id', $userBranchId)->whereMonth('date', $mVal)->whereYear('date', $yVal), 'inv_subtotal');
                                                 $returnSale = App\Models\ReturnItem::where('branch_id', $userBranchId)->whereMonth('date', $mVal)->whereYear('date', $yVal)->sum('subtotal');
                                                 $sale_amount = max(0, $grossSale - $returnSale);
+                                                $discount = (float) App\Models\Invoice::getFakeSum(App\Models\Invoice::where('branch_id', $userBranchId)->whereMonth('date', $mVal)->whereYear('date', $yVal), 'discount_amount');
+                                                $net_sale = max(0, $sale_amount - $discount);
 
                                                 $grossPur = App\Models\InvoiceItem::getFakeSum(App\Models\InvoiceItem::where('branch_id', $userBranchId)->whereMonth('date', $mVal)->whereYear('date', $yVal), 'pur_subtotal');
                                                 $returnPur = App\Models\ReturnItem::where('branch_id', $userBranchId)->whereMonth('date', $mVal)->whereYear('date', $yVal)->sum('pur_subtotal');
@@ -130,16 +138,22 @@
                                             <td>{{ number_format($sale_amount, 2) }}
                                                 {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}
                                             </td>
+                                            <td class="text-danger">{{ number_format($discount, 2) }}
+                                                {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}
+                                            </td>
+                                            <td class="font-weight-bold text-primary">{{ number_format($net_sale, 2) }}
+                                                {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}
+                                            </td>
                                             <td>{{ number_format($purchase_amount, 2) }}
                                                 {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}
                                             </td>
-                                            <td>{{ number_format($profit, 2) }}
+                                            <td class="font-weight-bold text-success">{{ number_format($profit, 2) }}
                                                 {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}
                                             </td>
-                                            <td>{{ number_format($expense, 2) }}
+                                            <td class="text-danger">{{ number_format($expense, 2) }}
                                                 {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}
                                             </td>
-                                            <td class="table_data_style_right">
+                                            <td class="table_data_style_right font-weight-bold {{ $net_profit >= 0 ? 'text-success' : 'text-danger' }}">
                                                 {{ $net_profit >= 0 ? number_format($net_profit, 2) : '(' . number_format(abs($net_profit), 2) . ')' }}
                                                 {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}
                                             </td>
