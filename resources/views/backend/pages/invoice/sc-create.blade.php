@@ -3522,6 +3522,7 @@
                     <div class="col-md-7 main-pos-col" id="main-pos-area">
                         <div class="card card_top">
                             <form action="{{ route('invoice.store') }}" id="payment_form" method="POST" onsubmit="return checkExplicitSubmit(event);">
+                                <input type="hidden" name="form_token" id="form_token" value="{{ \Illuminate\Support\Str::random(32) }}">
                                 @csrf
 
         @if(isset($quotation))
@@ -8883,12 +8884,42 @@ $(document).on('input change', '.inst_last_due_date', function() {
             window.isExplicitSubmitAllowed = true;
         });
 
-        // 8. Checkout button — submit form
+        // Global submit lock flag to prevent duplicate submissions on slow network / rapid clicks
+        window.isInvoiceSubmitting = false;
+
+        function showInvoiceLoadingOverlay() {
+            if ($('#posInvoiceLoadingOverlay').length === 0) {
+                $('body').append(`
+                    <div id="posInvoiceLoadingOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 99999999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff;">
+                        <div class="spinner-border text-primary" style="width: 3.5rem; height: 3.5rem; border-width: 4px;" role="status"></div>
+                        <h4 class="mt-3 font-weight-bold" style="letter-spacing: 0.5px; font-size: 20px;">{{ __("Processing Invoice...") }}</h4>
+                        <p class="text-white-50" style="font-size: 13px;">{{ __("Please wait, do not close or refresh this page.") }}</p>
+                    </div>
+                `);
+            }
+            $('#posInvoiceLoadingOverlay').show();
+        }
+
+        function hideInvoiceLoadingOverlay() {
+            $('#posInvoiceLoadingOverlay').fadeOut(150, function() {
+                $(this).remove();
+            });
+        }
+
+        // 8. Checkout button — submit form with full double-submission lock
         $(document).on('click', '#checkout', function() {
             var $btn = $(this);
 
+            if (window.isInvoiceSubmitting) {
+                iziToast.warning({
+                    title: '{{ __("Please Wait") }}',
+                    message: '{{ __("Invoice is already being processed. Please do not click again.") }}'
+                });
+                return false;
+            }
+
             // Validation: must have at least one product
-            if ($('#tbody tr').length === 0) {
+            if ($('#tbody tr.item-row').length === 0 && $('#tbody tr').length === 0) {
                 window.isExplicitSubmitAllowed = false;
                 iziToast.warning({
                     title: '{{ __("Warning") }}',
@@ -8897,29 +8928,28 @@ $(document).on('input change', '.inst_last_due_date', function() {
                 return;
             }
 
-            // Debounce protection
-            if ($btn.prop('disabled')) {
-                window.isExplicitSubmitAllowed = false;
-                iziToast.warning({
-                    title: '{{ __("Wait") }}',
-                    message: '{{ __("Please wait before clicking again.") }}'
-                });
-                return;
-            }
+            // Lock submission immediately
+            window.isInvoiceSubmitting = true;
+            window.isExplicitSubmitAllowed = true;
 
-            $btn.prop('disabled', true).html('<i class="feather icon-loader mr-2"></i> {{ __("Processing...") }}');
-
-            setTimeout(function() {
-                $btn.prop('disabled', false).html('<i class="feather icon-check-circle mr-2"></i> {{ __("Checkout") }}');
-            }, 5000);
+            // Lock all checkout buttons and show progress
+            $('#checkout, .full_pay_btn, .full_due_btn, .btn-pre-order-submit, .btn-checkout').prop('disabled', true);
+            $btn.html('<i class="fa fa-spinner fa-spin mr-1"></i> {{ __("Processing...") }}');
+            showInvoiceLoadingOverlay();
 
             // Submit the form
-            window.isExplicitSubmitAllowed = true;
             $('#payment_form').submit();
         });
 
-        // Keyboard Shortcuts
+        // Keyboard Shortcuts (Blocked while an invoice is processing)
         document.addEventListener('keydown', function(event) {
+            if (window.isInvoiceSubmitting) {
+                if (['F8', 'F9', 'F12', 'Enter'].includes(event.key)) {
+                    event.preventDefault();
+                    return false;
+                }
+            }
+
             // Check if installment mode is active
             let isInstallmentActive = $('.is_installment_toggle:checked').length > 0;
 
@@ -8927,7 +8957,6 @@ $(document).on('input change', '.inst_last_due_date', function() {
             if (event.key === 'F8') {
                 event.preventDefault();
                 if (!isInstallmentActive) {
-                    window.isExplicitSubmitAllowed = true;
                     $('.full_pay_btn:visible').first().click();
                 }
             }
@@ -8935,14 +8964,12 @@ $(document).on('input change', '.inst_last_due_date', function() {
             if (event.key === 'F9') {
                 event.preventDefault();
                 if (!isInstallmentActive) {
-                    window.isExplicitSubmitAllowed = true;
                     $('.full_due_btn:visible').first().click();
                 }
             }
             // F12 for Checkout
             if (event.key === 'F12') {
                 event.preventDefault();
-                window.isExplicitSubmitAllowed = true;
                 $('#checkout').click();
             }
         });
@@ -9074,12 +9101,13 @@ $(document).on('input change', '.inst_last_due_date', function() {
             });
 
             if (hasError) {
+                window.isInvoiceSubmitting = false;
                 window.isExplicitSubmitAllowed = false;
+                hideInvoiceLoadingOverlay();
+                $('#checkout, .full_pay_btn, .full_due_btn, .btn-pre-order-submit, .btn-checkout').prop('disabled', false);
+                $('#checkout').html('<i class="fa-solid fa-check-double mr-1"></i> {{ __("Checkout") }} (F12)');
                 e.preventDefault();
                 e.stopPropagation();
-                // Restore Checkout button state if it was disabled/processing
-                let checkoutBtn = $('#checkout');
-                checkoutBtn.prop('disabled', false).html('<i class="fa-solid fa-check-double mr-1"></i> {{ __("Checkout") }} (F12)');
                 return false;
             }
         });

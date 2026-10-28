@@ -337,6 +337,7 @@
                     <div class="col-md-6">
                         <div class="card card_top">
                             <form action="{{ route('invoice.store') }}" id="payment_form" method="POST" onsubmit="return checkExplicitSubmit(event);">
+                                <input type="hidden" name="form_token" value="{{ \Illuminate\Support\Str::random(32) }}">
                                 @csrf
                                 <div class="cart-container">
                                     <div class="cart-head">
@@ -601,6 +602,7 @@
                 <div class="col-md-6">
                     <div class="card card_top">
                         <form action="{{ route('invoice.store') }}" id="payment_form" method="POST" onsubmit="return checkExplicitSubmit(event);">
+                                <input type="hidden" name="form_token" value="{{ \Illuminate\Support\Str::random(32) }}">
                             @csrf
                             <div class="cart-container">
                                 <div class="cart-head">
@@ -1916,6 +1918,9 @@
                 });
                 return false;
             }
+            if (window.isInvoiceSubmitting) return false;
+            window.isInvoiceSubmitting = true;
+            $("#checkout").prop("disabled", true).html("<i class=\"fa fa-spinner fa-spin mr-1\"></i> Processing...");
             localStorage.clear();
             $("#payment_form").submit();
             $(this).prop('disabled', true).text('Processing...');

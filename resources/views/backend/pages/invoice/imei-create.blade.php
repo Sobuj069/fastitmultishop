@@ -197,6 +197,7 @@
             <div class="col-md-12 col-12">
                 <div class="card card_top">
                     <form action="{{ route('invoice.store') }}" id="payment_form" method="POST">
+                        <input type="hidden" name="form_token" value="{{ \Illuminate\Support\Str::random(32) }}">
                         @csrf
                         <div class="cart-container">
                             <div class="cart-head">

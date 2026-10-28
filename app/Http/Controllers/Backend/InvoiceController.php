@@ -26,6 +26,8 @@ use Carbon\Carbon as CarbonCarbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class InvoiceController extends Controller
@@ -429,27 +431,66 @@ class InvoiceController extends Controller
         $convertMode   = $request->filled('convert_mode') && $request->filled('pre_order_id');
         $preOrderId    = $request->pre_order_id;
 
-        // dd($request->all());
-        $this->validateImeiSelections($request);
-
-        $last_invoice = Invoice::where('invoice_no', 'LIKE', 'INV-%')
-            ->orderBy('id', 'desc')
-            ->select('invoice_no')
-            ->first();
-
-        if ($last_invoice == null) {
-            $nextNumber = 1;
-        } else {
-            $digits = preg_replace('/\D/', '', $last_invoice->invoice_no);
-            $nextNumber = ((int) $digits) + 1;
+        // ===== Anti-Double-Submission & Race Condition Protection =====
+        $formToken = $request->input('form_token');
+        if (!empty($formToken)) {
+            $tokenCacheKey = 'invoice_form_token_' . $formToken;
+            $existingInvoiceId = Cache::get($tokenCacheKey);
+            if ($existingInvoiceId) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => __('Invoice already created.'),
+                        'invoice_id' => $existingInvoiceId
+                    ]);
+                }
+                session()->flash('warning', __('This invoice has already been created.'));
+                return redirect()->route('invoice.print', $existingInvoiceId);
+            }
         }
 
-        $invoice_no = "INV-" . str_pad($nextNumber, 7, '0', STR_PAD_LEFT);
-
-        while (Invoice::where('invoice_no', $invoice_no)->exists()) {
-            $nextNumber++;
-            $invoice_no = "INV-" . str_pad($nextNumber, 7, '0', STR_PAD_LEFT);
+        $userId = auth()->id() ?? 'guest';
+        $userSubmitLock = Cache::lock('invoice_user_submit_' . $userId, 15);
+        if (!$userSubmitLock->get()) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => __('Another invoice is currently being processed. Please wait a moment.')
+                ], 429);
+            }
+            session()->flash('warning', __('Another invoice is currently being processed. Please wait a moment.'));
+            return redirect()->back();
         }
+
+        try {
+            // dd($request->all());
+            $this->validateImeiSelections($request);
+
+            // Mutex lock for race-condition-safe invoice number generation
+            $numLock = Cache::lock('invoice_number_generator_lock', 10);
+            try {
+                $numLock->block(5);
+                $last_invoice = Invoice::where('invoice_no', 'LIKE', 'INV-%')
+                    ->orderBy('id', 'desc')
+                    ->select('invoice_no')
+                    ->first();
+
+                if ($last_invoice == null) {
+                    $nextNumber = 1;
+                } else {
+                    $digits = preg_replace('/\D/', '', $last_invoice->invoice_no);
+                    $nextNumber = ((int) $digits) + 1;
+                }
+
+                $invoice_no = "INV-" . str_pad($nextNumber, 7, '0', STR_PAD_LEFT);
+
+                while (Invoice::where('invoice_no', $invoice_no)->exists()) {
+                    $nextNumber++;
+                    $invoice_no = "INV-" . str_pad($nextNumber, 7, '0', STR_PAD_LEFT);
+                }
+            } finally {
+                optional($numLock)->release();
+            }
 
         $invoice = new Invoice();
         $invoice->date = $request->date;
@@ -733,6 +774,25 @@ class InvoiceController extends Controller
             }
         }
 
+        // Database duplicate guard: Check if an identical invoice was saved within the last 6 seconds
+        $recentDuplicate = Invoice::where('branch_id', $targetBranchId)
+            ->where('customer_id', $request->customer_id)
+            ->where('total_amount', (float)($request->payable_amount ?? $request->total_amount))
+            ->where('created_at', '>=', now()->subSeconds(6))
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($recentDuplicate) {
+            $recentItems = InvoiceItem::where('invoice_id', $recentDuplicate->id)->pluck('product_id')->toArray();
+            if ($recentItems == (array) $request->product_id) {
+                if (!empty($formToken)) {
+                    Cache::put('invoice_form_token_' . $formToken, $recentDuplicate->id, 300);
+                }
+                session()->flash('warning', __('Duplicate invoice prevented. Redirecting to invoice #:no', ['no' => $recentDuplicate->invoice_no]));
+                return redirect()->route('invoice.print', $recentDuplicate->id);
+            }
+        }
+
         DB::transaction(function () use ($request, $invoice) {
             if ($invoice->save()) {
                 if ($invoice->quotation_id) {
@@ -904,6 +964,11 @@ class InvoiceController extends Controller
         session()->flash('success', __('Invoice Created Successfully'));
         logActivity('Create Invoice', "Invoice #{$invoice->invoice_no} created for customer: {$invoice->customer?->name}", $invoice);
 
+        // Remember form token with created invoice ID for 5 minutes
+        if (!empty($formToken)) {
+            Cache::put('invoice_form_token_' . $formToken, $invoice->id, 300);
+        }
+
         // If this was a Pre-Order → Sale conversion, mark pre-order as converted and go to Sale List
         if ($convertMode && $preOrderId) {
             $preOrder = \App\Models\PreOrder::find($preOrderId);
@@ -916,6 +981,9 @@ class InvoiceController extends Controller
         }
 
         return redirect()->route('invoice.print', $invoice->id);
+        } finally {
+            optional($userSubmitLock)->release();
+        }
     }
 
     public function show($id)
