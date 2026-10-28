@@ -130,7 +130,7 @@
                                                     ->sum('amount');
                                             }
 
-                                            $profit = $sale_amount - $purchase_amount;
+                                            $profit = $net_sale - $purchase_amount;
                                             $net_profit = (float) ($profit - $expense);
                                         @endphp
                                         <tr>
@@ -147,7 +147,7 @@
                                             <td>{{ number_format($purchase_amount, 2) }}
                                                 {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}
                                             </td>
-                                            <td class="font-weight-bold text-success">{{ number_format($profit, 2) }}
+                                            <td class="font-weight-bold {{ $profit >= 0 ? 'text-success' : 'text-danger' }}">{{ $profit >= 0 ? number_format($profit, 2) : '(' . number_format(abs($profit), 2) . ')' }}
                                                 {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}
                                             </td>
                                             <td class="text-danger">{{ number_format($expense, 2) }}
