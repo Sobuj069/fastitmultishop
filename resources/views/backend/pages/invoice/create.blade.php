@@ -421,10 +421,10 @@
                                                         <td colspan="3" class="text-right fw-bold">{{ __('Discount') }}</td>
                                                         <td>
                                                             <input type="text" class="form-control discount_amount"
-                                                                name="discount_amount" placeholder="0 (BDT)">
+                                                                name="discount_amount" placeholder="0%">
 
                                                             <input type="hidden" class="form-control discount"
-                                                                name="discount" placeholder="0">
+                                                                name="discount" placeholder="0%">
                                                         </td>
                                                         <td class="text-right"></td>
                                                     </tr>
@@ -686,10 +686,10 @@
                                                     <td colspan="3" class="text-right fw-bold">{{ __('Discount') }}</td>
                                                     <td>
                                                         <input type="text" class="form-control discount_amount"
-                                                            name="discount_amount" placeholder="0 (BDT)">
+                                                            name="discount_amount" placeholder="0%">
 
                                                         <input type="hidden" class="form-control discount"
-                                                            name="discount" placeholder="0">
+                                                            name="discount" placeholder="0%">
                                                     </td>
                                                     <td class="text-right"></td>
                                                 </tr>

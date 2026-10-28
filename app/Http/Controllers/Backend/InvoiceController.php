@@ -674,6 +674,11 @@ class InvoiceController extends Controller
                     continue;
                 }
 
+                // For IMEI products, availability is strictly validated in validateImeiSelections
+                if ((int) $product->imei === 1) {
+                    continue;
+                }
+
                 $variationId = $request->variation_id[$key] ?? null;
                 $hasVariations = $appScEnabled && \App\Models\ProductVariation::where('product_id', $productId)->exists();
                 if ($hasVariations && empty($variationId)) {
@@ -932,6 +937,7 @@ class InvoiceController extends Controller
         $productIds = $request->input('product_id', []);
         $imeiValues = $request->input('imei', []);
         $qtyValues = $request->input('main_qty', []);
+        $qtyChanged = false;
 
         $branchId = auth()->user()->branch_id == 1
             ? (int) ($request->branch_id ?? auth()->user()->branch_id)
@@ -958,11 +964,12 @@ class InvoiceController extends Controller
                 ]);
             }
 
+            // For IMEI products, the exact count of unique selected IMEIs determines the sold quantity.
+            // Automatically synchronize $request->main_qty so no mismatch occurs.
             $qty = isset($qtyValues[$key]) ? (int) $qtyValues[$key] : 0;
-            if ($qty > 0 && $qty !== count($imeis)) {
-                throw ValidationException::withMessages([
-                    "imei.$key" => __('Selected IMEI count must match quantity.'),
-                ]);
+            if ($qty !== count($imeis)) {
+                $qtyValues[$key] = count($imeis);
+                $qtyChanged = true;
             }
 
             foreach ($imeis as $imei) {
@@ -981,6 +988,10 @@ class InvoiceController extends Controller
                     "imei.$key" => __('Some selected IMEI are not available.'),
                 ]);
             }
+        }
+
+        if ($qtyChanged) {
+            $request->merge(['main_qty' => $qtyValues]);
         }
     }
 
