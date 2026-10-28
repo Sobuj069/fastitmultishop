@@ -3689,15 +3689,14 @@
                                                         name="discount_val_input" placeholder="0" autocomplete="off" value=""
                                                         style="border-top-right-radius: 0 !important;width: 40px !important; border-bottom-right-radius: 0 !important; flex: 1 1 auto; min-width: 0;">
                                                     <select class="form-control discount_type_select" name="discount_type"
-                                                        style="max-width: 56px !important; min-width: 48px !important; padding: 0 2px !important; border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; border-left: 0 !important; font-size: 12px; font-weight: bold; background: #f8f9fa; cursor: pointer; text-align-last: center;">
-                                                        <option value="percent" selected>%</option>
-                                                        <option value="fixed">{{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</option>
+                                                        style="max-width: 56px !important; min-width: 48px !important; padding: 0 4px !important; border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; border-left: 0 !important; font-size: 11px; font-weight: bold; background: #e2e8f0; color: #334155; cursor: default; text-align-last: center; -webkit-appearance: none; -moz-appearance: none; appearance: none;">
+                                                        <option value="fixed" selected>BDT</option>
                                                     </select>
                                                 </div>
                                                 <input type="hidden" class="form-control discount_amount"
-                                                    name="discount_amount" placeholder="0%">
+                                                    name="discount_amount" placeholder="0">
                                                 <input type="hidden" class="form-control discount"
-                                                    name="discount" placeholder="0%">
+                                                    name="discount" placeholder="0">
                                             </div>
                                             <!-- VAT -->
                                             @if (is_vat_enabled())
@@ -4955,15 +4954,14 @@
             }
 
             if (appliedDiscountType && appliedDiscountValue !== null && appliedDiscountValue > 0) {
+                let discAmount = parseFloat(appliedDiscountValue);
                 if (appliedDiscountType === 'percentage' || appliedDiscountType === 'percent') {
-                    $('.discount_type_select').val('percent');
-                    $('.discount_val_input').val(parseFloat(appliedDiscountValue));
-                    $('.discount_amount').val(parseFloat(appliedDiscountValue) + '%');
-                } else if (appliedDiscountType === 'fixed') {
-                    $('.discount_type_select').val('fixed');
-                    $('.discount_val_input').val(parseFloat(appliedDiscountValue));
-                    $('.discount_amount').val(parseFloat(appliedDiscountValue));
+                    let est = parseFloat($("input[name='estimated_amount']").val()) || 0;
+                    discAmount = Math.round(est * (parseFloat(appliedDiscountValue) / 100));
                 }
+                $('.discount_type_select').val('fixed');
+                $('.discount_val_input').val(discAmount > 0 ? discAmount : '');
+                $('.discount_amount').val(discAmount > 0 ? discAmount : '');
             } else {
                 $('.discount_val_input').val('');
                 $('.discount_amount').val('');
@@ -5305,7 +5303,7 @@
             let lineGross = (main_qty * unit_price) + (sub_qty * sub_unit_price);
 
             let discVal = parseFloat(row.find('.product_discount_val').val()) || 0;
-            let discType = row.find('.product_discount_type').val() || 'percent';
+            let discType = row.find('.product_discount_type').val() || 'fixed';
             let calculatedDiscountAmount = 0;
 
             if (discType === 'percent') {
@@ -5338,7 +5336,7 @@
             return subTotal;
         }
 
-        function calculate_sub_total(main_qty, sub_qty, unit_price, related_by, has_sub_unit, discount = 0, discount_type = 'percent') {
+        function calculate_sub_total(main_qty, sub_qty, unit_price, related_by, has_sub_unit, discount = 0, discount_type = 'fixed') {
             var sub_unit_price = 0;
             if (has_sub_unit == "true" && related_by != 0) {
                 sub_unit_price = parseFloat(unit_price / related_by);
@@ -6572,9 +6570,8 @@
                                     class="form-control product_discount_val" 
                                     name="product_discount_val[]"
                                     value="0" placeholder="0" />
-                                <select class="form-control product_discount_type" name="product_discount_type[]" style="width: 42%; max-width: 52px; min-width: 44px; padding: 0 2px; border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 0; height: 31px; font-size: 11px; font-weight: 600; cursor: pointer; text-align-last: center; background: #f8f9fa;">
-                                    <option value="percent" selected>%</option>
-                                    <option value="fixed">{{ empty(get_setting('com_currency')) ? 'Tk' : get_setting('com_currency') }}</option>
+                                <select class="form-control product_discount_type" name="product_discount_type[]" style="width: 42%; max-width: 52px; min-width: 44px; padding: 0 2px; border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 0; height: 31px; font-size: 11px; font-weight: 700; cursor: default; text-align-last: center; background: #e2e8f0; color: #334155; -webkit-appearance: none; -moz-appearance: none; appearance: none;">
+                                    <option value="fixed" selected>BDT</option>
                                 </select>
                                 <input type="hidden" class="product_discount" name="product_discount[]" value="0" />
                             </div>
@@ -7172,7 +7169,7 @@
             let displayQty = Number.isInteger(totalQty) ? totalQty : parseFloat(totalQty.toFixed(3));
             $(".total_item").text(displayQty);
 
-            let discountType = $(".discount_type_select:visible").first().val() || $(".discount_type_select").val() || 'percent';
+            let discountType = $(".discount_type_select:visible").first().val() || $(".discount_type_select").val() || 'fixed';
             let discountVal = parseFloat($(".discount_val_input:visible").first().val() || $(".discount_val_input").val()) || 0;
             let estimated_amount = parseFloat(
                 $("input[name='estimated_amount']").val()
@@ -7788,7 +7785,7 @@
                         rate: row.find(".rate").val() || 0,
                         product_discount: row.find(".product_discount").val() || 0,
                         product_discount_val: row.find(".product_discount_val").val() || 0,
-                        product_discount_type: row.find(".product_discount_type").val() || 'percent',
+                        product_discount_type: row.find(".product_discount_type").val() || 'fixed',
                         sub_total: row.find(".sub_total").val() || 0,
                         variation_id: row.find("select[name='variation_id[]']").val() || row.find("input[name='variation_id[]']").val() || '',
                         imei: row.find(".imei_input").val() || '',
@@ -8118,7 +8115,7 @@
                             rate: parseFloat(row.find(".rate").val()) || 0,
                             product_discount: parseFloat(row.find(".product_discount").val()) || 0,
                             product_discount_val: parseFloat(row.find(".product_discount_val").val()) || 0,
-                            product_discount_type: row.find(".product_discount_type").val() || 'percent',
+                            product_discount_type: row.find(".product_discount_type").val() || 'fixed',
                             sub_total: parseFloat(row.find(".sub_total").val()) || 0,
                             imei: row.find(".imei_input").val() || '',
                             product_name: row.find(".item-name, td:first").text().trim()

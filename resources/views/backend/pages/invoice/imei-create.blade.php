@@ -278,10 +278,10 @@
                                                 <td colspan="{{ (env('APP_WARRANTY') == 'yes' ? 4 : 3) }}" class="text-right fw-bold">Discount</td>
                                                 <td>
                                                     <input type="text" class="form-control discount_amount"
-                                                        name="discount_amount" placeholder="0%">
+                                                        name="discount_amount" placeholder="0 (BDT)">
 
                                                     <input type="hidden" class="form-control discount" name="discount"
-                                                        placeholder="0%">
+                                                        placeholder="0">
                                                 </td>
                                                 <td class="text-right"></td>
                                             </tr>
