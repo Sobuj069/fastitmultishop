@@ -201,14 +201,14 @@ public static function getRealSum($query, $column)
             if ($filterBranchId) {
                 $grossSale = InvoiceItem::getFakeSum(InvoiceItem::where('branch_id', $filterBranchId)->whereBetween('date', $dateRange), 'inv_subtotal');
                 $returnSale = ReturnItem::where('branch_id', $filterBranchId)->whereBetween('date', $dateRange)->sum('subtotal');
-                $discount = Invoice::getFakeSum(Invoice::where('branch_id', $filterBranchId)->whereBetween('date', $dateRange), 'discount_amount');
+                $discount = $this->getAttributableDiscount($dateRange, $filterBranchId);
                 $total_sale_today = max(0, $grossSale - $returnSale - $discount);
                 $totalpurchase = Purchase::where('branch_id', $filterBranchId)->whereBetween('date', $dateRange)->sum('total_amount');
                 $totalExpense = Expense::where('branch_id', $filterBranchId)->whereBetween('date', $dateRange)->sum('amount');
             } else {
                 $grossSale = InvoiceItem::getFakeSum(InvoiceItem::whereBetween('date', $dateRange), 'inv_subtotal');
                 $returnSale = ReturnItem::whereBetween('date', $dateRange)->sum('subtotal');
-                $discount = Invoice::getFakeSum(Invoice::query()->whereBetween('date', $dateRange), 'discount_amount');
+                $discount = $this->getAttributableDiscount($dateRange);
                 $total_sale_today = max(0, $grossSale - $returnSale - $discount);
                 $totalpurchase = Purchase::whereBetween('date', $dateRange)->sum('total_amount');
                 $totalExpense = Expense::whereBetween('date', $dateRange)->sum('amount');
@@ -216,7 +216,7 @@ public static function getRealSum($query, $column)
         } else {
             $grossSale = InvoiceItem::getFakeSum(InvoiceItem::where('branch_id', $userBranchId)->whereBetween('date', $dateRange), 'inv_subtotal');
             $returnSale = ReturnItem::where('branch_id', $userBranchId)->whereBetween('date', $dateRange)->sum('subtotal');
-            $discount = Invoice::getFakeSum(Invoice::where('branch_id', $userBranchId)->whereBetween('date', $dateRange), 'discount_amount');
+            $discount = $this->getAttributableDiscount($dateRange, $userBranchId);
             $total_sale_today = max(0, $grossSale - $returnSale - $discount);
             $totalpurchase = Purchase::where('branch_id', $userBranchId)->whereBetween('date', $dateRange)->sum('total_amount');
             $totalExpense = Expense::where('branch_id', $userBranchId)->whereBetween('date', $dateRange)->sum('amount');
@@ -241,14 +241,14 @@ public static function getRealSum($query, $column)
                 $purchaseCost = InvoiceItem::getFakeSum(InvoiceItem::where('branch_id', $filterBranchId)->whereBetween('date', $dateRange), 'pur_subtotal');
                 $returnSale = ReturnItem::where('branch_id', $filterBranchId)->whereBetween('date', $dateRange)->sum('subtotal');
                 $returnPur = ReturnItem::where('branch_id', $filterBranchId)->whereBetween('date', $dateRange)->sum('pur_subtotal');
-                $discount = Invoice::getFakeSum(Invoice::where('branch_id', $filterBranchId)->whereBetween('date', $dateRange), 'discount_amount');
+                $discount = $this->getAttributableDiscount($dateRange, $filterBranchId);
                 $returnDis = ReturnTbl::where('branch_id', $filterBranchId)->whereBetween('date', $dateRange)->sum('discount_amount');
             } else {
                 $saleCost = InvoiceItem::getFakeSum(InvoiceItem::whereBetween('date', $dateRange), 'inv_subtotal');
                 $purchaseCost = InvoiceItem::getFakeSum(InvoiceItem::whereBetween('date', $dateRange), 'pur_subtotal');
                 $returnSale = ReturnItem::whereBetween('date', $dateRange)->sum('subtotal');
                 $returnPur = ReturnItem::whereBetween('date', $dateRange)->sum('pur_subtotal');
-                $discount = Invoice::getFakeSum(Invoice::query()->whereBetween('date', $dateRange), 'discount_amount');
+                $discount = $this->getAttributableDiscount($dateRange);
                 $returnDis = ReturnTbl::whereBetween('date', $dateRange)->sum('discount_amount');
             }
         } else {
@@ -256,7 +256,7 @@ public static function getRealSum($query, $column)
             $purchaseCost = InvoiceItem::getFakeSum(InvoiceItem::where('branch_id', $userBranchId)->whereBetween('date', $dateRange), 'pur_subtotal');
             $returnSale = ReturnItem::where('branch_id', $userBranchId)->whereBetween('date', $dateRange)->sum('subtotal');
             $returnPur = ReturnItem::where('branch_id', $userBranchId)->whereBetween('date', $dateRange)->sum('pur_subtotal');
-            $discount = Invoice::getFakeSum(Invoice::where('branch_id', $userBranchId)->whereBetween('date', $dateRange), 'discount_amount');
+            $discount = $this->getAttributableDiscount($dateRange, $userBranchId);
             $returnDis = ReturnTbl::where('branch_id', $userBranchId)->whereBetween('date', $dateRange)->sum('discount_amount');
         }
 
@@ -266,6 +266,41 @@ public static function getRealSum($query, $column)
         $totalProfit = $netSale - $netPur;
         $profit = $totalProfit - $dis;
         return $profit;
+    }
+
+    private function getAttributableDiscount($dateRange, $branchId = null, $userId = null)
+    {
+        $invItemsQuery = InvoiceItem::whereBetween('date', $dateRange);
+        if ($branchId) {
+            $invItemsQuery->where('branch_id', $branchId);
+        }
+        if ($userId) {
+            $invItemsQuery->whereHas('invoice', fn($q) => $q->where('created_by', $userId));
+        }
+
+        $invIds = $invItemsQuery->pluck('invoice_id')->unique();
+
+        $totalAttributable = 0;
+        foreach ($invIds as $id) {
+            $inv = Invoice::find($id);
+            if (!$inv || $inv->is_fake) continue;
+
+            $discAmount = (float) ($inv->discount_amount ?? 0);
+            if ($discAmount <= 0) continue;
+
+            $inRangeSub = (float) InvoiceItem::where('invoice_id', $id)
+                ->whereBetween('date', $dateRange)
+                ->sum('inv_subtotal');
+            $allSub = (float) InvoiceItem::where('invoice_id', $id)->sum('inv_subtotal');
+
+            if ($allSub > 0 && $inRangeSub < $allSub) {
+                $ratio = $inRangeSub / $allSub;
+                $totalAttributable += round($discAmount * $ratio, 2);
+            } else {
+                $totalAttributable += $discAmount;
+            }
+        }
+        return (float) $totalAttributable;
     }
 
 
@@ -348,7 +383,7 @@ public static function getRealSum($query, $column)
 
         $allInvoiceItems = InvoiceItem::filterByFakeSale($itemsQuery);
         $allReturnItems = ReturnItem::filterByFakeSale($returnsQuery);
-        $grandTotalDiscount = (float) Invoice::getFakeSum($invDiscountQuery, 'discount_amount');
+        $grandTotalDiscount = $this->getAttributableDiscount([$sdate, $edate], $branchId, $isSalesman ? $authUser->id : null);
 
         $salesGrouped = $allInvoiceItems->groupBy('product_id');
         $returnsGrouped = $allReturnItems->groupBy('product_id');
@@ -508,7 +543,7 @@ public static function getRealSum($query, $column)
 
         $allInvoiceItems = InvoiceItem::filterByFakeSale($itemsQuery);
         $allReturnItems = ReturnItem::filterByFakeSale($returnsQuery);
-        $grandTotalDiscount = (float) Invoice::getFakeSum($invDiscountQuery, 'discount_amount');
+        $grandTotalDiscount = $this->getAttributableDiscount([$sdate, $edate], $branchId, $isSalesman ? $authUser->id : null);
 
         $salesGrouped = $allInvoiceItems->groupBy('product_id');
         $returnsGrouped = $allReturnItems->groupBy('product_id');
@@ -649,7 +684,7 @@ public static function getRealSum($query, $column)
 
         $allInvoiceItems = InvoiceItem::filterByFakeSale($itemsQuery);
         $allReturnItems = ReturnItem::filterByFakeSale($returnsQuery);
-        $grandTotalDiscount = (float) Invoice::getFakeSum($invDiscountQuery, 'discount_amount');
+        $grandTotalDiscount = $this->getAttributableDiscount([$sdate, $edate], $branchId, $isSalesman ? $authUser->id : null);
 
         $salesGrouped = $allInvoiceItems->groupBy('product_id');
         $returnsGrouped = $allReturnItems->groupBy('product_id');
