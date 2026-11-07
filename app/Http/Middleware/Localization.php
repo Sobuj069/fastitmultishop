@@ -18,22 +18,35 @@ class Localization
      */
     public function handle(Request $request, Closure $next)
     {
-        $defaultLang = env('APP_DEFAULT_LANG') ?: (function_exists('get_setting') ? get_setting('default_language') : null) ?: 'en';
-        if (!in_array($defaultLang, ['en', 'bn'])) {
-            $defaultLang = 'en';
+        // 1. Determine system default language (BusinessSetting DB > APP_DEFAULT_LANG .env > config > 'en')
+        $defaultLang = 'en';
+        if (function_exists('get_setting')) {
+            try {
+                $dbLang = get_setting('default_language');
+                if (in_array($dbLang, ['en', 'bn'])) {
+                    $defaultLang = $dbLang;
+                }
+            } catch (\Throwable $e) {}
+        }
+        if ($defaultLang === 'en') {
+            $envLang = env('APP_DEFAULT_LANG') ?: config('app.locale');
+            if (in_array($envLang, ['en', 'bn'])) {
+                $defaultLang = $envLang;
+            }
         }
 
-        if (Session::has('applocale') && Session::get('manual_locale_switch')) {
+        // 2. Check if active session already has a valid locale preference
+        if (Session::has('applocale')) {
             $locale = Session::get('applocale');
             if (in_array($locale, ['en', 'bn'])) {
                 App::setLocale($locale);
-            } else {
-                App::setLocale($defaultLang);
+                return $next($request);
             }
-        } else {
-            App::setLocale($defaultLang);
-            Session::put('applocale', $defaultLang);
         }
+
+        // 3. Fallback to system default language and save in session
+        App::setLocale($defaultLang);
+        Session::put('applocale', $defaultLang);
 
         return $next($request);
     }

@@ -574,4 +574,4 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 });
 Route::get('/customer/invoice/copy/{id}', [InvoiceController::class,'customerPrintInvoice'])->name('printNewInvoice');
 
-Route::get('lang/{lang}', [App\Http\Controllers\LanguageController::class, 'switchLang']);
+Route::get('lang/{lang}', [App\Http\Controllers\LanguageController::class, 'switchLang'])->name('lang.switch');

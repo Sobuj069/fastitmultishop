@@ -69,8 +69,9 @@ class SuperAdminSettingsController extends Controller
 
             // Instantly apply to current admin session
             session()->put('applocale', $defaultLang);
-            session()->forget('manual_locale_switch');
+            session()->save();
             app()->setLocale($defaultLang);
+            config(['app.locale' => $defaultLang]);
         }
 
         $this->updateEnvFileBatch($envUpdates);

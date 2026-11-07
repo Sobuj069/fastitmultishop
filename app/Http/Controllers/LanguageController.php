@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Session;
 
 class LanguageController extends Controller
@@ -15,9 +16,10 @@ class LanguageController extends Controller
      */
     public function switchLang($lang)
     {
-        if (array_key_exists($lang, ['en' => 'English', 'bn' => 'Bengali'])) {
+        if (in_array($lang, ['en', 'bn'])) {
             Session::put('applocale', $lang);
-            Session::put('manual_locale_switch', true);
+            Session::save();
+            App::setLocale($lang);
         }
         return redirect()->back();
     }
