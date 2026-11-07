@@ -49,6 +49,30 @@ class SuperAdminSettingsController extends Controller
             $_SERVER[$key] = $val;
         }
 
+        // Default System Language Setting
+        if ($request->filled('APP_DEFAULT_LANG')) {
+            $defaultLang = $request->input('APP_DEFAULT_LANG') === 'bn' ? 'bn' : 'en';
+            $envUpdates['APP_DEFAULT_LANG'] = $defaultLang;
+            putenv("APP_DEFAULT_LANG={$defaultLang}");
+            $_ENV['APP_DEFAULT_LANG'] = $defaultLang;
+            $_SERVER['APP_DEFAULT_LANG'] = $defaultLang;
+
+            // Sync to BusinessSetting
+            $langSetting = BusinessSetting::where('type', 'default_language')->first();
+            if (!$langSetting) {
+                $langSetting = new BusinessSetting();
+                $langSetting->type = 'default_language';
+            }
+            $langSetting->value = $defaultLang;
+            $langSetting->save();
+            Cache::forget('business_settings');
+
+            // Instantly apply to current admin session
+            session()->put('applocale', $defaultLang);
+            session()->forget('manual_locale_switch');
+            app()->setLocale($defaultLang);
+        }
+
         $this->updateEnvFileBatch($envUpdates);
 
         // Sync VAT in BusinessSetting to avoid discrepancy

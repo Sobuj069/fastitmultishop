@@ -17,6 +17,7 @@ class LanguageController extends Controller
     {
         if (array_key_exists($lang, ['en' => 'English', 'bn' => 'Bengali'])) {
             Session::put('applocale', $lang);
+            Session::put('manual_locale_switch', true);
         }
         return redirect()->back();
     }

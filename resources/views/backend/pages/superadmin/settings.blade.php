@@ -24,6 +24,26 @@
                 <span class="text-xs text-slate-500 mb-4 d-block">{{ __('Toggle backend modules and system functions globally') }}</span>
 
                 <div class="space-y-4">
+                    {{-- DEFAULT_LANGUAGE --}}
+                    @php
+                        $currentLang = $envSettings['APP_DEFAULT_LANG'] ?? env('APP_DEFAULT_LANG', (function_exists('get_setting') ? get_setting('default_language') : null) ?: 'en');
+                    @endphp
+                    <div class="flex items-center justify-between p-3.5 bg-blue-500/10 dark:bg-blue-900/20 rounded-xl border border-blue-500/20 mb-3 shadow-sm">
+                        <div>
+                            <span class="font-bold text-sm text-blue-600 dark:text-blue-400 d-block flex items-center gap-2">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                {{ __('System Default Language / সিস্টেমের ডিফল্ট ভাষা') }}
+                            </span>
+                            <small class="text-slate-500">{{ __('বাংলা সিলেক্ট করলে সিস্টেমে সবার আগে বাংলা ভাষা শো করবে, অন্যথায় ডিফল্ট ইংরেজি শো করবে। (ব্যবহারকারীরা চাইলে যেকোনো সময় টপবার থেকেও পরিবর্তন করতে পারবে)') }}</small>
+                        </div>
+                        <div class="flex items-center pl-3">
+                            <select name="APP_DEFAULT_LANG" class="form-control" style="min-width: 170px; font-weight: 700; border-radius: 8px; border: 1.5px solid #3b82f6; padding: 7px 12px; background: #ffffff; color: #1e293b; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                <option value="bn" {{ $currentLang == 'bn' ? 'selected' : '' }}>বাংলা (Bangla)</option>
+                                <option value="en" {{ $currentLang == 'en' ? 'selected' : '' }}>English (ইংরেজি)</option>
+                            </select>
+                        </div>
+                    </div>
+
                     {{-- APP_SC --}}
                     <div class="flex items-center justify-between p-3 bg-slate-800/10 rounded-xl border border-slate-700/10">
                         <div>
