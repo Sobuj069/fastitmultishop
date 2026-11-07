@@ -122,8 +122,19 @@
                                             }
                                             $rowSubtotal = $items->sum('subtotal');
                                             $sub_total += $rowSubtotal;
-                                            $rowDiscount = (float) ($data->discount_amount ?? 0);
-                                            $rowDelivery = (float) ($data->delivery_charge ?? 0);
+
+                                            // Calculate proportional discount & delivery if only partial items of invoice are shown
+                                            $allItemsOfInvoice = App\Models\InvoiceItem::where('invoice_id', $data->id)->get();
+                                            $totalInvSub = (float) $allItemsOfInvoice->sum('subtotal');
+                                            if ($totalInvSub > 0 && $rowSubtotal < $totalInvSub) {
+                                                $ratio = $rowSubtotal / $totalInvSub;
+                                                $rowDiscount = round(((float) ($data->discount_amount ?? 0)) * $ratio, 2);
+                                                $rowDelivery = round(((float) ($data->delivery_charge ?? 0)) * $ratio, 2);
+                                            } else {
+                                                $rowDiscount = (float) ($data->discount_amount ?? 0);
+                                                $rowDelivery = (float) ($data->delivery_charge ?? 0);
+                                            }
+
                                             $rowTotal = max(0, $rowSubtotal - $rowDiscount) + $rowDelivery;
                                             $grossProfit =
                                                 $saleAmt - $goodCost - $rowDiscount + $rowDelivery;
@@ -183,11 +194,11 @@
                                                         </ul>
                                                     @endforeach
                                                 </td>
-                                                <td>{{ number_format($data->discount_amount, 2) }}
+                                                <td>{{ number_format($rowDiscount, 2) }}
                                                     {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}
                                                 </td>
                                                 <td class="table_data_style_right">
-                                                    {{ number_format($data->total_amount, 2) }}
+                                                    {{ number_format($rowTotal, 2) }}
                                                     {{ empty(get_setting('com_currency')) ?: get_setting('com_currency') }}
                                                 </td>
                                             </tr>
