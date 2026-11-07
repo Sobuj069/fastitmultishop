@@ -415,7 +415,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::get('/category/index', 'categoryIndex')->name('category-index');
         Route::post('/category/store', 'categoryStore')->name('category-store');
         Route::post('/category/update/{id}', 'categoryUpdate')->name('category-update');
-        Route::delete('/category/destroy/{id}', 'categoryDestroy')->name('category-destroy');
+        Route::match(['delete', 'post'], '/category/destroy/{id}', 'categoryDestroy')->name('category-destroy');
     });
 
     // --------------------> asset <--------------------

@@ -2,7 +2,7 @@
 @section('section-title', __('Expense'))
 @section('page-title', __('Expense Category List'))
 
-@if (check_permission('category.store'))
+@if (check_permission('expense.category-store') || check_permission('category.store'))
     @section('action-button')
         <a href="#" data-toggle="modal" data-target="#addModal" class="btn add_list_btn">
             <i class="mr-2 feather icon-plus"></i>
@@ -39,7 +39,7 @@
                                                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
 
                                                     {{-- edit --}}
-                                                    @if (check_permission('category.update'))
+                                                    @if (check_permission('expense.category-update') || check_permission('category.update'))
                                                         <a href="#" data-toggle="modal"
                                                             data-target="#editModal-{{ $data->id }}"
                                                             class="dropdown-item text-primary">
@@ -51,12 +51,18 @@
                                                     @php
                                                         $use_category = App\Models\Expense::where('category_id', $data->id)->count();
                                                     @endphp
-                                                    @if (check_permission('category.destroy'))
-                                                        @if($use_category<1)
+                                                    @if (check_permission('expense.category-destroy') || check_permission('category.destroy'))
+                                                        @if($use_category < 1)
                                                             <a href="#" data-toggle="modal"
                                                                 data-target="#deleteModal-{{ $data->id }}"
                                                                 class="dropdown-item text-danger">
                                                                 <i class="feather icon-trash"></i> {{ __('Delete') }}
+                                                            </a>
+                                                        @else
+                                                            <a href="javascript:void(0)"
+                                                                class="dropdown-item text-muted"
+                                                                onclick="alert('{{ __('Cannot delete this category because it is being used in :count expense(s). Please delete or update those expenses first.', ['count' => $use_category]) }}')">
+                                                                <i class="feather icon-trash"></i> <span style="opacity: 0.6;">{{ __('Delete') }} ({{ $use_category }})</span>
                                                             </a>
                                                         @endif
                                                     @endif
@@ -86,6 +92,7 @@
                         {{-- delete modal --}}
                         <form action="{{ route('expense.category-destroy', $data->id) }}" method="POST">
                             @csrf
+                            @method('DELETE')
                             <x-delete-modal title="{{ __('Category') }}" id="{{ $data->id }}" />
                         </form>
                     @endforeach

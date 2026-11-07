@@ -241,6 +241,17 @@ class ExpenseController extends Controller
     public function categoryDestroy(string $id)
     {
         $category = ExpenseCategory::find($id);
+        if (!$category) {
+            session()->flash('error', __('Expense Category not found'));
+            return back();
+        }
+
+        $expenseCount = Expense::where('category_id', $id)->count();
+        if ($expenseCount > 0) {
+            session()->flash('error', __('Cannot delete this category because it is being used in :count expense(s). Please delete or update those expenses first.', ['count' => $expenseCount]));
+            return back();
+        }
+
         $category->delete();
         session()->flash('success', __('Expense Category deleted successfully'));
         return back();
