@@ -581,8 +581,6 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10 animate-slide-up delay-400">            
         </div>
     </div>
-    </div>
-    </div>  </div>
 
 @endsection
 

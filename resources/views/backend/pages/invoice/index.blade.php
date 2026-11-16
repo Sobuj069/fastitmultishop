@@ -333,7 +333,8 @@
                                                      @endif
                                                  </div>
                                              </div>
-                                         </td>
+                                         </div>
+                                     </td>
                                      </tr>
                                 @empty
                                      <tr>

@@ -39,7 +39,6 @@
                                             <input type="date" class="form-control" value="{{ date('Y-m-d') }}"
                                                 name="date" required>
                                             <div class="error">{{ (isset($errors) && $errors->has('date')) ? $errors->first('date') : '' }}</div>
-                                            </div>
                                         </div>
 
                                         {{-- Supplier --}}
