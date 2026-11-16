@@ -250,6 +250,23 @@
             document.body.style.cursor = 'wait';
         });
     </script>
+
+    {{-- License Expiry Payment QR Modal --}}
+    @include('backend.layouts.includes.payment-qr-modal')
+
+    @if(function_exists('should_show_license_payment_qr') && should_show_license_payment_qr())
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                if (typeof openPaymentQrModal === 'function') {
+                    openPaymentQrModal();
+                } else if (typeof $ !== 'undefined' && $('#paymentQrModal').length) {
+                    $('#paymentQrModal').modal('show');
+                }
+            }, 600);
+        });
+    </script>
+    @endif
 </body>
 
 </html>

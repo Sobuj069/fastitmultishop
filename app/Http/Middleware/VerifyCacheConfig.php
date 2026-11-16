@@ -119,7 +119,7 @@ class VerifyCacheConfig
 <div id="license-renewal-banner" style="background: linear-gradient(135deg, #eab308, #ca8a04); color: #000000; text-align: center; padding: 12px 20px; font-weight: 700; font-size: 14px; position: sticky; top: 0; z-index: 999999; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-bottom: 1px solid rgba(0,0,0,0.1); font-family: 'Plus Jakarta Sans', sans-serif;">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
     <span>Attention: Your software license is expiring in {$daysLeft} days. Please renew your license key to prevent system lock.</span>
-    <a href="https://wa.me/880960101362" target="_blank" style="background: #000000; color: #ffffff; padding: 6px 12px; border-radius: 8px; font-size: 12px; text-decoration: none; font-weight: 600; transition: all 0.2s ease; margin-left: 10px;">Renew Now</a>
+    <a href="javascript:void(0);" onclick="if(typeof openPaymentQrModal==='function'){openPaymentQrModal();}else{window.open('https://wa.me/8801784159071');}" style="background: #000000; color: #ffffff; padding: 6px 12px; border-radius: 8px; font-size: 12px; text-decoration: none; font-weight: 600; transition: all 0.2s ease; margin-left: 10px; cursor: pointer;">Renew Now (Bangla QR)</a>
 </div>
 HTML;
                 $content = preg_replace('/<body[^>]*>/i', '$0' . $bannerHtml, $content, 1);

@@ -3272,3 +3272,120 @@ if (!function_exists('loyalty_min_redeem_points')) {
 
 
 
+
+if (!function_exists('get_license_info')) {
+    /**
+     * Get decoded software license information from LICENSE_KEY (.env)
+     *
+     * @return array
+     */
+    function get_license_info()
+    {
+        $licenseKey = env('LICENSE_KEY') ?: ($_ENV['LICENSE_KEY'] ?? ($_SERVER['LICENSE_KEY'] ?? getenv('LICENSE_KEY')));
+        if (empty($licenseKey)) {
+            return [
+                'has_license'     => false,
+                'domain'          => '',
+                'expires_at'      => '',
+                'plan_type'       => '',
+                'days_left'       => null,
+                'is_expiring'     => false,
+                'is_expired'      => false,
+                'warning_message' => ''
+            ];
+        }
+
+        $parts = explode('.', $licenseKey);
+        $payload = json_decode(base64_decode($parts[0] ?? ''), true);
+        if (!is_array($payload)) {
+            return [
+                'has_license'     => false,
+                'domain'          => '',
+                'expires_at'      => '',
+                'plan_type'       => '',
+                'days_left'       => null,
+                'is_expiring'     => false,
+                'is_expired'      => false,
+                'warning_message' => ''
+            ];
+        }
+
+        $domain = strtolower(trim($payload['domain'] ?? ''));
+        $expiresAt = trim($payload['expires_at'] ?? '');
+        $planType = strtolower(trim($payload['plan_type'] ?? 'monthly'));
+
+        if (empty($expiresAt) || $expiresAt === 'lifetime') {
+            return [
+                'has_license'     => true,
+                'domain'          => $domain,
+                'expires_at'      => 'lifetime',
+                'plan_type'       => $planType ?: 'lifetime',
+                'days_left'       => null,
+                'is_expiring'     => false,
+                'is_expired'      => false,
+                'warning_message' => ''
+            ];
+        }
+
+        $today = strtotime(date('Y-m-d'));
+        $expiryTimestamp = strtotime($expiresAt);
+        $daysLeft = (int)ceil(($expiryTimestamp - $today) / 86400);
+        $isExpired = ($daysLeft < 0);
+        $isExpiring = false;
+
+        // Condition requested by user:
+        // Monthly: 7 days before expiry (daysLeft <= 7)
+        // Yearly: 1 month (30 days) before expiry (daysLeft <= 30)
+        if ($planType === 'yearly') {
+            if ($daysLeft <= 30) {
+                $isExpiring = true;
+            }
+        } else {
+            if ($daysLeft <= 7) {
+                $isExpiring = true;
+            }
+        }
+
+        $isBangla = (App::getLocale() == 'bn');
+        $warningMessage = '';
+        if ($isExpired) {
+            $warningMessage = $isBangla
+                ? 'আপনার সফটওয়্যার লাইসেন্স এর মেয়াদ শেষ হয়ে গেছে। সফটওয়্যার সচল রাখতে দ্রুত পেমেন্ট সম্পন্ন করে লাইসেন্স নবায়ন করুন।'
+                : 'Your software license has expired. Please make payment immediately to renew your license.';
+        } elseif ($isExpiring) {
+            $daysText = $daysLeft . ' ' . ($isBangla ? 'দিন' : ($daysLeft == 1 ? 'day' : 'days'));
+            $warningMessage = $isBangla
+                ? "আপনার সফটওয়্যার লাইসেন্স এর মেয়াদ আর মাত্র {$daysText} বাকি আছে। নিরবচ্ছিন্ন সেবার জন্য দ্রুত পেমেন্ট করে নবায়ন করুন।"
+                : "Your software license will expire in {$daysText}. Please complete payment now to renew your license.";
+        }
+
+        return [
+            'has_license'     => true,
+            'domain'          => $domain,
+            'expires_at'      => $expiresAt,
+            'plan_type'       => $planType,
+            'days_left'       => $daysLeft,
+            'is_expiring'     => $isExpiring,
+            'is_expired'      => $isExpired,
+            'warning_message' => $warningMessage,
+        ];
+    }
+}
+
+if (!function_exists('should_show_license_payment_qr')) {
+    /**
+     * Check if the license payment QR popup should trigger automatically.
+     * Triggers for monthly licenses 7 days before expiry, and yearly licenses 1 month (30 days) before expiry.
+     *
+     * @return bool
+     */
+    function should_show_license_payment_qr()
+    {
+        if (config('app.debug') && request()->has('test_license_popup')) {
+            return true;
+        }
+
+        $info = get_license_info();
+        return (bool)($info['is_expiring'] || $info['is_expired']);
+    }
+}

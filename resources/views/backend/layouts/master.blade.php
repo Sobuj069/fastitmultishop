@@ -219,6 +219,29 @@
         @include('backend.layouts.includes.chatbot')
     @endif
     @stack('js')
+
+    {{-- License Expiration Auto QR Code Popup --}}
+    @if(function_exists('should_show_license_payment_qr') && should_show_license_payment_qr())
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const isDashboard = {{ Route::currentRouteName() == 'dashboard' ? 'true' : 'false' }};
+            const sessionKey = 'license_qr_shown_post_login';
+            const alreadyShown = sessionStorage.getItem(sessionKey);
+
+            // Pop up automatically on dashboard or initial visit after login
+            if (isDashboard || !alreadyShown) {
+                setTimeout(function() {
+                    if (typeof openPaymentQrModal === 'function') {
+                        openPaymentQrModal();
+                    } else if (typeof $ !== 'undefined' && $('#paymentQrModal').length) {
+                        $('#paymentQrModal').modal('show');
+                    }
+                    sessionStorage.setItem(sessionKey, 'true');
+                }, 800);
+            }
+        });
+    </script>
+    @endif
 </body>
 
 </html>
